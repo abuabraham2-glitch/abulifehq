@@ -202,8 +202,8 @@ export default function Dashboard() {
                       style={{ borderColor: '#D0CBC2' }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] text-muted-foreground truncate">{item.title}</p>
-                      <p className="text-[11px] font-semibold text-foreground">
+                      <p className="text-[13px] truncate" style={{ color: '#6B6560' }}>{item.title}</p>
+                      <p className="text-[11px] font-semibold" style={{ color: '#2C2A25' }}>
                         {item.start_time?.slice(0, 5)} — {item.end_time?.slice(0, 5)}
                       </p>
                     </div>
