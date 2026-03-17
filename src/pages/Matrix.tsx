@@ -60,7 +60,7 @@ export default function Matrix() {
                       className="w-full flex items-center gap-2 text-left p-1.5 rounded-lg hover:bg-white/50 transition-colors"
                     >
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(task.category) }} />
-                      <span className="text-sm text-foreground truncate flex-1">{task.name}</span>
+                      <span className="text-sm text-foreground truncate flex-1">{task.name || 'Untitled task'}</span>
                       {task.est_minutes && (
                         <span className="text-[11px] text-muted-foreground flex-shrink-0">{task.est_minutes}m</span>
                       )}
