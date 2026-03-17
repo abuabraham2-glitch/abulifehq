@@ -16,22 +16,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-24">
       {/* Theme toggle */}
       <button
         onClick={toggle}
-        className="fixed top-4 right-4 z-50 p-2 rounded-full bg-card border border-border shadow-sm hover:bg-muted transition-colors"
+        className="fixed top-4 right-4 z-50 p-2.5 rounded-full bg-card border border-border shadow-sm hover:bg-muted transition-colors"
         aria-label="Toggle theme"
       >
         {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
       </button>
 
-      <main className="max-w-2xl mx-auto px-4 pt-6">
+      <main className="max-w-2xl mx-auto px-5 pt-8">
         {children}
       </main>
 
       {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-border" style={{ backgroundColor: 'hsl(var(--nav-background))' }}>
         <div className="max-w-2xl mx-auto flex justify-around">
           {navItems.map(({ to, icon: Icon, label }) => {
             const isActive = location.pathname === to;
