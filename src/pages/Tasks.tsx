@@ -95,7 +95,7 @@ export default function Tasks() {
               }}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{task.name || 'Untitled task'}</p>
+                <p className="text-sm md:text-base font-medium text-foreground truncate md:whitespace-normal">{task.name || 'Untitled task'}</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   {task.category && (
                     <span

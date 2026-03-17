@@ -96,3 +96,8 @@
 .matrix-task-name { color: hsl(var(--foreground)); }
 .matrix-minutes { color: hsl(var(--muted-foreground)); }
 .matrix-sub { color: hsl(var(--muted-foreground)); }
+
+/* Desktop typography boost */
+@media (min-width: 768px) {
+  body { font-size: 15px; }
+}
