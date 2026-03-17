@@ -154,23 +154,10 @@ export default function Dashboard() {
                 </p>
 
                 {/* Timer ring */}
-                <div className="relative w-[120px] h-[120px] mx-auto mb-6">
-                  <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
-                    <circle
-                      cx="60" cy="60" r="52" fill="none"
-                      stroke={getCategoryColor(currentItem.category)}
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(timerProgress / 100) * 2 * Math.PI * 52} ${2 * Math.PI * 52}`}
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[32px] font-medium text-foreground">{minutesLeft}</span>
-                    <span className="text-[11px] text-muted-foreground">min left</span>
-                  </div>
-                </div>
+                <FocusTimer
+                  estMinutes={currentItem.est_minutes || 25}
+                  category={currentItem.category}
+                />
 
                 <div className="flex justify-center gap-3">
                   <button
