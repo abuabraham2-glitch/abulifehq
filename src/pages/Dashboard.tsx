@@ -202,8 +202,8 @@ export default function Dashboard() {
                       style={{ borderColor: '#D0CBC2' }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] text-muted-foreground truncate">{item.title}</p>
-                      <p className="text-[11px] font-semibold text-foreground">
+                      <p className="text-[13px] truncate" style={{ color: '#6B6560' }}>{item.title}</p>
+                      <p className="text-[11px] font-semibold" style={{ color: '#2C2A25' }}>
                         {item.start_time?.slice(0, 5)} — {item.end_time?.slice(0, 5)}
                       </p>
                     </div>
@@ -219,7 +219,7 @@ export default function Dashboard() {
           {/* Today's Wins */}
           <div className="rounded-[14px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(0,0,0,0.04)' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs text-muted-foreground font-medium">Today's wins</p>
+              <p className="text-xs font-medium" style={{ color: '#6B6560' }}>Today's wins</p>
               <p className="text-[13px] font-medium" style={{ color: '#B8906C' }}>
                 {completedItems.length}/{planItems?.length ?? 0}
               </p>
@@ -235,7 +235,7 @@ export default function Dashboard() {
               ))}
             </div>
             {completedItems.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No wins yet — let's go!</p>
+              <p className="text-xs" style={{ color: '#6B6560' }}>No wins yet — let's go!</p>
             ) : (
               <div className="space-y-2">
                 {completedItems.map((item) => (
@@ -243,7 +243,7 @@ export default function Dashboard() {
                     <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#059669' }}>
                       <Check size={10} className="text-white" />
                     </div>
-                    <span className="text-xs text-muted-foreground truncate">{item.title}</span>
+                    <span className="text-xs truncate" style={{ color: '#6B6560' }}>{item.title}</span>
                   </div>
                 ))}
               </div>
