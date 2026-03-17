@@ -6,10 +6,10 @@ import { TaskEditModal } from '@/components/TaskEditModal';
 import { getCategoryColor } from '@/lib/categories';
 
 const quadrants = [
-  { key: 'Do Now', label: 'DO NOW', sub: 'Important & Urgent', accent: 'border-red-500', headerBg: 'bg-red-500' },
-  { key: 'Schedule', label: 'SCHEDULE', sub: 'Important & Not Urgent', accent: 'border-blue-500', headerBg: 'bg-blue-500' },
-  { key: 'Delegate', label: 'DELEGATE', sub: 'Not Important & Urgent', accent: 'border-emerald-500', headerBg: 'bg-emerald-500' },
-  { key: 'Delete', label: 'LOW PRIORITY', sub: 'Not Important & Not Urgent', accent: 'border-gray-400', headerBg: 'bg-gray-400' },
+  { key: 'Do Now', label: 'DO NOW', sub: 'Important & Urgent', color: '#EF4444' },
+  { key: 'Schedule', label: 'SCHEDULE', sub: 'Important & Not Urgent', color: '#3B82F6' },
+  { key: 'Delegate', label: 'DELEGATE', sub: 'Not Important & Urgent', color: '#10B981' },
+  { key: 'Delete', label: 'LOW PRIORITY', sub: 'Not Important & Not Urgent', color: '#9CA3AF' },
 ] as const;
 
 export default function MatrixPage() {
@@ -27,29 +27,29 @@ export default function MatrixPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 pb-4">
+      <div className="space-y-5 pb-4">
         <h1 className="text-2xl font-bold">Eisenhower Matrix</h1>
-        <div className="grid grid-cols-2 gap-3">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-48 rounded-xl" />)}</div>
+        <div className="grid grid-cols-2 gap-4">{[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-48 rounded-xl" />)}</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 pb-4">
+    <div className="space-y-5 pb-4">
       <h1 className="text-2xl font-bold">Eisenhower Matrix</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {quadrants.map(({ key, label, sub, headerBg }) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {quadrants.map(({ key, label, sub, color }) => {
           const items = grouped[key];
           return (
-            <Card key={key} className="border-none shadow-sm overflow-hidden">
-              <div className={`${headerBg} px-3 py-2 text-white`}>
+            <Card key={key} className="border-none shadow-sm rounded-xl overflow-hidden">
+              <div className="px-4 py-3 border-b border-border" style={{ backgroundColor: `${color}0A` }}>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold tracking-wide">{label}</span>
-                  <span className="text-xs font-bold">{items.length}</span>
+                  <span className="text-xs font-bold tracking-wide" style={{ color }}>{label}</span>
+                  <span className="text-xs font-bold" style={{ color }}>{items.length}</span>
                 </div>
-                <p className="text-[10px] opacity-70">{sub} · {sumHours(items)}h</p>
+                <p className="text-[10px] text-muted-foreground">{sub} · {sumHours(items)}h</p>
               </div>
-              <CardContent className="p-2 max-h-60 overflow-y-auto">
+              <CardContent className="p-3 max-h-60 overflow-y-auto">
                 {items.length === 0 ? (
                   <p className="text-xs text-muted-foreground text-center py-4">No tasks</p>
                 ) : (
@@ -58,15 +58,15 @@ export default function MatrixPage() {
                       <div
                         key={task.id}
                         onClick={() => setEditTask(task)}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer transition-colors"
+                        className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-muted cursor-pointer transition-colors"
                       >
                         <span
                           className="w-2 h-2 rounded-full flex-shrink-0"
                           style={{ backgroundColor: getCategoryColor(task.category) }}
                         />
-                        <span className="text-xs truncate">{task.name}</span>
+                        <span className="text-xs truncate flex-1">{task.name}</span>
                         {task.est_minutes && (
-                          <span className="text-[10px] text-muted-foreground ml-auto">{task.est_minutes}m</span>
+                          <span className="text-[10px] text-muted-foreground">{task.est_minutes}m</span>
                         )}
                       </div>
                     ))}
