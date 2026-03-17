@@ -38,18 +38,18 @@ export default function Matrix() {
           {grouped.map(({ key, color, tasks: qTasks }) => (
             <div
               key={key}
-              className="rounded-[14px] p-3.5 md:p-5 min-h-[200px] md:min-h-[350px] flex flex-col matrix-quad"
+              className="rounded-[14px] p-3.5 md:p-5 min-h-[200px] md:min-h-[280px] md:max-h-[300px] flex flex-col matrix-quad"
               style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
             >
-              <div className="mb-3 md:mb-4">
+              <div className="mb-3 md:mb-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm md:text-lg font-semibold" style={{ color }}>{key}</p>
+                  <p className="text-sm md:text-[18px] font-semibold" style={{ color }}>{key}</p>
                   <span className="text-xs md:text-sm font-medium" style={{ color }}>{qTasks.length}</span>
                 </div>
                 <p className="text-[10px] md:text-xs matrix-sub">{QUADRANT_LABELS[key]}</p>
                 <p className="text-[10px] md:text-xs matrix-sub">{sumHours(qTasks)}h est.</p>
               </div>
-              <div className="flex-1 space-y-1.5 md:space-y-2 overflow-y-auto max-h-[300px] md:max-h-[500px]">
+              <div className="flex-1 space-y-1.5 md:space-y-2 overflow-y-auto">
                 {qTasks.length === 0 ? (
                   <p className="text-xs md:text-sm matrix-sub">No tasks</p>
                 ) : (
@@ -60,9 +60,9 @@ export default function Matrix() {
                       className="w-full flex items-center gap-2 md:gap-3 text-left p-1.5 md:p-2.5 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
                     >
                       <div className="w-2 h-2 md:w-2.5 md:h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(task.category) }} />
-                      <span className="text-sm md:text-base truncate md:whitespace-normal flex-1 matrix-task-name">{task.name || 'Untitled task'}</span>
+                      <span className="text-sm md:text-[15px] whitespace-normal flex-1 matrix-task-name">{task.name || 'Untitled task'}</span>
                       {task.est_minutes && (
-                        <span className="text-[11px] md:text-sm flex-shrink-0 matrix-minutes">{task.est_minutes}m</span>
+                        <span className="text-[11px] md:text-[14px] flex-shrink-0 matrix-minutes">{task.est_minutes}m</span>
                       )}
                     </button>
                   ))

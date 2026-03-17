@@ -62,27 +62,39 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-4">
       {/* Greeting */}
-      <div>
-        <p className="text-[13px] text-muted-foreground">{formatDate(new Date())}</p>
-        <h1 className="text-[22px] md:text-[28px] font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
-        <p className="text-[13px] mt-1" style={{ color: '#B8906C' }}>{phrase}</p>
+      <div className="md:flex md:items-start md:justify-between md:gap-8">
+        <div>
+          <p className="text-[13px] md:text-[14px] text-muted-foreground">{formatDate(new Date())}</p>
+          <h1 className="text-[22px] md:text-[32px] md:font-semibold font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
 
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={() => setBrainDumpOpen(true)}
-            className="px-4 py-2 rounded-[20px] text-xs font-medium"
-            style={{ backgroundColor: '#2C2A25', color: '#F5F0E8' }}
-          >
-            + Brain dump
-          </button>
-          <button
-            onClick={() => setLifeCtxOpen(true)}
-            className="px-4 py-2 rounded-[20px] text-xs font-medium border"
-            style={{ color: '#8A8478', borderColor: '#D0CBC2', backgroundColor: 'transparent' }}
-          >
-            Life context
-          </button>
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => setBrainDumpOpen(true)}
+              className="px-4 py-2 rounded-[20px] text-xs font-medium"
+              style={{ backgroundColor: '#2C2A25', color: '#F5F0E8' }}
+            >
+              + Brain dump
+            </button>
+            <button
+              onClick={() => setLifeCtxOpen(true)}
+              className="px-4 py-2 rounded-[20px] text-xs font-medium border"
+              style={{ color: '#8A8478', borderColor: '#D0CBC2', backgroundColor: 'transparent' }}
+            >
+              Life context
+            </button>
+          </div>
+
+          {/* Mobile-only quote */}
+          <p className="text-[13px] mt-2 md:hidden" style={{ color: '#B8906C' }}>{phrase}</p>
         </div>
+
+        {/* Desktop-only quote */}
+        <p
+          className="hidden md:block text-[20px] italic text-right max-w-[340px] leading-relaxed mt-2"
+          style={{ color: '#B8906C', fontFamily: 'Georgia, "Times New Roman", serif' }}
+        >
+          "{phrase}"
+        </p>
       </div>
 
       {/* Triage Alert */}
