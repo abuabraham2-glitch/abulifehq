@@ -64,7 +64,7 @@ export default function Dashboard() {
       {/* Greeting */}
       <div>
         <p className="text-[13px] text-muted-foreground">{formatDate(new Date())}</p>
-        <h1 className="text-[22px] font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
+        <h1 className="text-[22px] md:text-[28px] font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
         <p className="text-[13px] mt-1" style={{ color: '#B8906C' }}>{phrase}</p>
 
         <div className="flex gap-2 mt-4">

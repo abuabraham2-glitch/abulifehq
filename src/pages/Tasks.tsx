@@ -21,7 +21,7 @@ export default function Tasks() {
   return (
     <div className="space-y-5 pb-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-medium text-foreground">Tasks</h1>
+        <h1 className="text-[22px] md:text-[26px] font-medium text-foreground">Tasks</h1>
         <button
           onClick={() => setAddOpen(true)}
           className="w-10 h-10 rounded-full flex items-center justify-center"
@@ -86,7 +86,7 @@ export default function Tasks() {
             <button
               key={task.id}
               onClick={() => setEditTask(task)}
-              className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-3.5 text-left transition-colors hover:opacity-90"
+              className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-3.5 md:p-5 text-left transition-colors hover:opacity-90"
               style={{
                 borderLeft: `4px solid ${getCategoryColor(task.category)}`,
                 border: '0.5px solid rgba(0,0,0,0.04)',
@@ -95,7 +95,7 @@ export default function Tasks() {
               }}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{task.name || 'Untitled task'}</p>
+                <p className="text-sm md:text-base font-medium text-foreground truncate md:whitespace-normal">{task.name || 'Untitled task'}</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   {task.category && (
                     <span
