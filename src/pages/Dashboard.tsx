@@ -60,11 +60,7 @@ export default function Dashboard() {
   const hasPlan = !!plan && !!planItems?.length;
   const planSummary = plan?.ai_notes || (typeof plan?.plan_data === 'string' ? plan.plan_data : null);
 
-  const timerProgress = currentItem?.est_minutes
-    ? ((currentItem.est_minutes - minutesLeft) / currentItem.est_minutes) * 100
-    : 0;
-
-  const opacities = [0.55, 0.55, 0.45, 0.4, 0.35];
+  const opacities = [0.55, 0.50, 0.45, 0.40, 0.35];
 
   return (
     <div className="space-y-6 pb-4">
