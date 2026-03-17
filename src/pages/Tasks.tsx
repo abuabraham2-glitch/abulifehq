@@ -21,7 +21,7 @@ export default function Tasks() {
   return (
     <div className="space-y-5 pb-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-medium text-foreground">Tasks</h1>
+        <h1 className="text-[22px] md:text-[26px] font-medium text-foreground">Tasks</h1>
         <button
           onClick={() => setAddOpen(true)}
           className="w-10 h-10 rounded-full flex items-center justify-center"
