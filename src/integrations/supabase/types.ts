@@ -14,7 +14,316 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      brain_dumps: {
+        Row: {
+          created_at: string | null
+          id: string
+          notion_id: string | null
+          processed: boolean | null
+          raw_text: string
+          source: string | null
+          task_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notion_id?: string | null
+          processed?: boolean | null
+          raw_text: string
+          source?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notion_id?: string | null
+          processed?: boolean | null
+          raw_text?: string
+          source?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_dumps_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_plans: {
+        Row: {
+          ai_notes: string | null
+          completion_rate: number | null
+          confirmed_at: string | null
+          created_at: string | null
+          id: string
+          plan_data: Json
+          plan_date: string
+          reviewed_at: string | null
+          status: string | null
+          tasks_completed: number | null
+          tasks_planned: number | null
+          total_actual_minutes: number | null
+          total_planned_minutes: number | null
+        }
+        Insert: {
+          ai_notes?: string | null
+          completion_rate?: number | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          plan_data?: Json
+          plan_date: string
+          reviewed_at?: string | null
+          status?: string | null
+          tasks_completed?: number | null
+          tasks_planned?: number | null
+          total_actual_minutes?: number | null
+          total_planned_minutes?: number | null
+        }
+        Update: {
+          ai_notes?: string | null
+          completion_rate?: number | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          id?: string
+          plan_data?: Json
+          plan_date?: string
+          reviewed_at?: string | null
+          status?: string | null
+          tasks_completed?: number | null
+          tasks_planned?: number | null
+          total_actual_minutes?: number | null
+          total_planned_minutes?: number | null
+        }
+        Relationships: []
+      }
+      plan_items: {
+        Row: {
+          actual_minutes: number | null
+          calendar_event_id: string | null
+          category: string | null
+          color: string | null
+          created_at: string | null
+          end_time: string
+          est_minutes: number | null
+          id: string
+          is_calendar_event: boolean | null
+          plan_id: string | null
+          sort_order: number | null
+          start_time: string
+          status: string | null
+          task_id: string | null
+          title: string
+        }
+        Insert: {
+          actual_minutes?: number | null
+          calendar_event_id?: string | null
+          category?: string | null
+          color?: string | null
+          created_at?: string | null
+          end_time: string
+          est_minutes?: number | null
+          id?: string
+          is_calendar_event?: boolean | null
+          plan_id?: string | null
+          sort_order?: number | null
+          start_time: string
+          status?: string | null
+          task_id?: string | null
+          title: string
+        }
+        Update: {
+          actual_minutes?: number | null
+          calendar_event_id?: string | null
+          category?: string | null
+          color?: string | null
+          created_at?: string | null
+          end_time?: string
+          est_minutes?: number | null
+          id?: string
+          is_calendar_event?: boolean | null
+          plan_id?: string | null
+          sort_order?: number | null
+          start_time?: string
+          status?: string | null
+          task_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "daily_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_tasks: {
+        Row: {
+          active: boolean | null
+          category: string | null
+          created_at: string | null
+          day_of_month: number | null
+          day_of_week: number | null
+          est_minutes: number | null
+          frequency: string
+          id: string
+          importance: string | null
+          last_generated: string | null
+          name: string
+          urgency: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          day_of_month?: number | null
+          day_of_week?: number | null
+          est_minutes?: number | null
+          frequency: string
+          id?: string
+          importance?: string | null
+          last_generated?: string | null
+          name: string
+          urgency?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          category?: string | null
+          created_at?: string | null
+          day_of_month?: number | null
+          day_of_week?: number | null
+          est_minutes?: number | null
+          frequency?: string
+          id?: string
+          importance?: string | null
+          last_generated?: string | null
+          name?: string
+          urgency?: string | null
+        }
+        Relationships: []
+      }
+      tasks: {
+        Row: {
+          actual_minutes: number | null
+          ai_categorized: boolean | null
+          ai_confidence: number | null
+          category: string | null
+          completed_at: string | null
+          created_at: string | null
+          due_date: string | null
+          est_minutes: number | null
+          id: string
+          importance: string | null
+          name: string
+          needs_triage: boolean | null
+          notes: string | null
+          notion_id: string | null
+          quadrant: string | null
+          source: string | null
+          status: string | null
+          updated_at: string | null
+          urgency: string | null
+        }
+        Insert: {
+          actual_minutes?: number | null
+          ai_categorized?: boolean | null
+          ai_confidence?: number | null
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          est_minutes?: number | null
+          id?: string
+          importance?: string | null
+          name: string
+          needs_triage?: boolean | null
+          notes?: string | null
+          notion_id?: string | null
+          quadrant?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+        }
+        Update: {
+          actual_minutes?: number | null
+          ai_categorized?: boolean | null
+          ai_confidence?: number | null
+          category?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          due_date?: string | null
+          est_minutes?: number | null
+          id?: string
+          importance?: string | null
+          name?: string
+          needs_triage?: boolean | null
+          notes?: string | null
+          notion_id?: string | null
+          quadrant?: string | null
+          source?: string | null
+          status?: string | null
+          updated_at?: string | null
+          urgency?: string | null
+        }
+        Relationships: []
+      }
+      triage_queue: {
+        Row: {
+          ai_reasoning: string | null
+          created_at: string | null
+          id: string
+          resolved_at: string | null
+          status: string | null
+          suggested_category: string | null
+          suggested_est_minutes: number | null
+          suggested_quadrant: string | null
+          task_id: string | null
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          created_at?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: string | null
+          suggested_category?: string | null
+          suggested_est_minutes?: number | null
+          suggested_quadrant?: string | null
+          task_id?: string | null
+        }
+        Update: {
+          ai_reasoning?: string | null
+          created_at?: string | null
+          id?: string
+          resolved_at?: string | null
+          status?: string | null
+          suggested_category?: string | null
+          suggested_est_minutes?: number | null
+          suggested_quadrant?: string | null
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "triage_queue_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
