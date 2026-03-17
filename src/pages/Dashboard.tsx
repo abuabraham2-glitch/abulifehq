@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Inbox, ChevronRight, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { LifeContextModal } from '@/components/LifeContextModal';
 import { TaskEditModal } from '@/components/TaskEditModal';
+import { FocusTimer } from '@/components/FocusTimer';
 import { useTodayPlan, useTodayPlanItems, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
@@ -47,17 +48,7 @@ export default function Dashboard() {
   const totalH = Math.floor(totalPlannedMinutes / 60);
   const totalM = totalPlannedMinutes % 60;
 
-  // Timer state
-  const [minutesLeft, setMinutesLeft] = useState(0);
-  useEffect(() => {
-    if (currentItem?.est_minutes) setMinutesLeft(currentItem.est_minutes);
-  }, [currentItem]);
-
-  useEffect(() => {
-    if (minutesLeft <= 0) return;
-    const timer = setInterval(() => setMinutesLeft((m) => Math.max(0, m - 1)), 60000);
-    return () => clearInterval(timer);
-  }, [minutesLeft]);
+  // Timer removed — now handled by FocusTimer component
 
   const handleCompleteItem = async (item: PlanItem) => {
     if (item.task_id) {
@@ -69,11 +60,7 @@ export default function Dashboard() {
   const hasPlan = !!plan && !!planItems?.length;
   const planSummary = plan?.ai_notes || (typeof plan?.plan_data === 'string' ? plan.plan_data : null);
 
-  const timerProgress = currentItem?.est_minutes
-    ? ((currentItem.est_minutes - minutesLeft) / currentItem.est_minutes) * 100
-    : 0;
-
-  const opacities = [0.55, 0.55, 0.45, 0.4, 0.35];
+  const opacities = [0.55, 0.50, 0.45, 0.40, 0.35];
 
   return (
     <div className="space-y-6 pb-4">
@@ -167,23 +154,10 @@ export default function Dashboard() {
                 </p>
 
                 {/* Timer ring */}
-                <div className="relative w-[120px] h-[120px] mx-auto mb-6">
-                  <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                    <circle cx="60" cy="60" r="52" fill="none" stroke="hsl(var(--border))" strokeWidth="5" />
-                    <circle
-                      cx="60" cy="60" r="52" fill="none"
-                      stroke={getCategoryColor(currentItem.category)}
-                      strokeWidth="5"
-                      strokeLinecap="round"
-                      strokeDasharray={`${(timerProgress / 100) * 2 * Math.PI * 52} ${2 * Math.PI * 52}`}
-                      className="transition-all duration-1000"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-[32px] font-medium text-foreground">{minutesLeft}</span>
-                    <span className="text-[11px] text-muted-foreground">min left</span>
-                  </div>
-                </div>
+                <FocusTimer
+                  estMinutes={currentItem.est_minutes || 25}
+                  category={currentItem.category}
+                />
 
                 <div className="flex justify-center gap-3">
                   <button
