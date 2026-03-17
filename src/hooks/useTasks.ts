@@ -14,7 +14,6 @@ export function useTasks(filters?: {
     queryKey: ['tasks', filters],
     queryFn: async () => {
       let query = supabase.from('tasks').select('*').order('created_at', { ascending: false });
-      
       if (filters?.category && filters.category !== 'All') {
         query = query.eq('category', filters.category);
       }
@@ -31,7 +30,6 @@ export function useTasks(filters?: {
       if (filters?.search) {
         query = query.ilike('name', `%${filters.search}%`);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return data as Task[];
@@ -77,6 +75,7 @@ export function useUpdateTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['triage'] });
+      qc.invalidateQueries({ queryKey: ['daily-plan'] });
     },
   });
 }
@@ -91,6 +90,9 @@ export function useCompleteTask() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      qc.invalidateQueries({ queryKey: ['daily-plan'] });
+    },
   });
 }

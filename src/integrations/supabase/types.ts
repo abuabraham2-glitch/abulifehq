@@ -100,6 +100,24 @@ export type Database = {
         }
         Relationships: []
       }
+      life_context: {
+        Row: {
+          context_text: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          context_text: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          context_text?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       plan_items: {
         Row: {
           actual_minutes: number | null
