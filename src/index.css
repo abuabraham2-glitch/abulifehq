@@ -101,3 +101,7 @@
 @media (min-width: 768px) {
   body { font-size: 15px; }
 }
+
+/* Hide scrollbar for tab bars */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

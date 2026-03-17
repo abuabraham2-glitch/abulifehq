@@ -33,8 +33,8 @@ export default function Triage() {
   };
 
   return (
-    <div className="space-y-5 pb-4">
-      <h1 className="text-[22px] font-medium text-foreground">Triage</h1>
+    <div className="space-y-4 md:space-y-5 pb-4">
+      <h1 className="text-[22px] md:text-[26px] font-medium text-foreground">Triage</h1>
 
       {isLoading ? (
         <div className="space-y-4">
@@ -45,8 +45,8 @@ export default function Triage() {
           <div className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: '#059669' }}>
             <Check size={24} className="text-white" />
           </div>
-          <p className="text-sm font-medium text-foreground">All clear</p>
-          <p className="text-xs text-muted-foreground mt-1">Nothing to review right now</p>
+          <p className="text-[14px] font-medium text-foreground">All clear</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Nothing to review right now</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -55,10 +55,10 @@ export default function Triage() {
             return (
               <div
                 key={item.id}
-                className="rounded-[14px] bg-card p-5"
+                className="rounded-[14px] bg-card p-4 md:p-5"
                 style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
               >
-                <h3 className="text-lg font-medium text-foreground mb-2">{task?.name || 'Unknown task'}</h3>
+                <h3 className="text-[16px] md:text-lg font-medium text-foreground mb-2">{task?.name || 'Unknown task'}</h3>
 
                 <div className="flex items-center gap-2 mb-2">
                   {item.suggested_category && (
@@ -84,7 +84,7 @@ export default function Triage() {
                     </span>
                   )}
                   {item.suggested_est_minutes && (
-                    <span className="text-xs text-muted-foreground">{item.suggested_est_minutes}m</span>
+                    <span className="text-[13px] text-muted-foreground">{item.suggested_est_minutes}m</span>
                   )}
                 </div>
 
@@ -92,24 +92,25 @@ export default function Triage() {
                   <p className="text-[13px] text-muted-foreground mb-4 leading-relaxed">{item.ai_reasoning}</p>
                 )}
 
-                <div className="flex gap-2">
+                {/* Mobile: stacked buttons. Desktop: row */}
+                <div className="flex flex-col md:flex-row gap-2">
                   <button
                     onClick={() => handleApprove(item)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium text-white min-h-[48px]"
                     style={{ backgroundColor: '#059669' }}
                   >
                     <Check size={16} /> Approve
                   </button>
                   <button
                     onClick={() => task && setEditTask(task)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium text-white min-h-[48px]"
                     style={{ backgroundColor: '#D97706' }}
                   >
                     <Edit size={16} /> Edit
                   </button>
                   <button
                     onClick={() => handleDismiss(item)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-medium text-white"
+                    className="flex-1 flex items-center justify-center gap-1.5 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium text-white min-h-[48px]"
                     style={{ backgroundColor: '#9CA3AF' }}
                   >
                     <X size={16} /> Dismiss

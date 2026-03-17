@@ -60,8 +60,8 @@ export default function Dashboard() {
   const opacities = [0.55, 0.50, 0.45, 0.40, 0.35];
 
   return (
-    <div className="space-y-6 pb-4">
-      {/* Greeting */}
+    <div className="space-y-5 md:space-y-6 pb-4">
+      {/* Greeting — mobile: stacked, desktop: two-column */}
       <div className="md:flex md:items-stretch md:justify-between md:gap-8">
         <div className="flex-shrink-0">
           <p className="text-[13px] md:text-[14px] text-muted-foreground">{formatDate(new Date())}</p>
@@ -70,22 +70,24 @@ export default function Dashboard() {
           <div className="flex gap-2 mt-4">
             <button
               onClick={() => setBrainDumpOpen(true)}
-              className="px-4 py-2 rounded-[20px] text-xs font-medium"
-              style={{ backgroundColor: '#2C2A25', color: '#F5F0E8' }}
+              className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-[20px] text-[13px] md:text-xs font-medium min-h-[44px] md:min-h-0"
+              style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
             >
               + Brain dump
             </button>
             <button
               onClick={() => setLifeCtxOpen(true)}
-              className="px-4 py-2 rounded-[20px] text-xs font-medium border"
-              style={{ color: '#8A8478', borderColor: '#D0CBC2', backgroundColor: 'transparent' }}
+              className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-[20px] text-[13px] md:text-xs font-medium border min-h-[44px] md:min-h-0"
+              style={{ color: 'hsl(var(--muted-foreground))', borderColor: 'hsl(var(--border))', backgroundColor: 'transparent' }}
             >
               Life context
             </button>
           </div>
 
           {/* Mobile-only quote */}
-          <p className="text-[13px] mt-2 md:hidden" style={{ color: '#B8906C' }}>{phrase}</p>
+          <p className="text-[14px] mt-3 italic text-center md:hidden" style={{ color: '#B8906C' }}>
+            "{phrase}"
+          </p>
         </div>
 
         {/* Desktop-only quote */}
@@ -103,17 +105,17 @@ export default function Dashboard() {
       {triageCount > 0 && (
         <button
           onClick={() => navigate('/triage')}
-          className="w-full flex items-center gap-3 p-4 rounded-[14px] text-left"
-          style={{ backgroundColor: '#FEF2F2', border: '0.5px solid #FECACA' }}
+          className="w-full flex items-center gap-3 p-4 rounded-[14px] text-left min-h-[48px]"
+          style={{ backgroundColor: 'hsl(0 93% 94%)', border: '0.5px solid hsl(0 93% 82%)' }}
         >
-          <div className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#FEE2E2' }}>
-            <Inbox size={16} style={{ color: '#DC2626' }} />
+          <div className="w-8 h-8 rounded-[10px] flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'hsl(0 93% 88%)' }}>
+            <Inbox size={16} className="text-destructive" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium" style={{ color: '#991B1B' }}>{triageCount} items need your review</p>
-            <p className="text-xs" style={{ color: '#B91C1C' }}>Tap to triage — takes 2 min</p>
+            <p className="text-[14px] font-medium text-destructive">{triageCount} items need your review</p>
+            <p className="text-[13px]" style={{ color: 'hsl(0 72% 41%)' }}>Tap to triage — takes 2 min</p>
           </div>
-          <ChevronRight size={18} style={{ color: '#DC2626' }} />
+          <ChevronRight size={18} className="text-destructive" />
         </button>
       )}
 
@@ -128,8 +130,8 @@ export default function Dashboard() {
 
       {!loading && !hasPlan && (
         <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
-          <p className="text-sm text-muted-foreground">No plan for today yet.</p>
-          <p className="text-xs text-muted-foreground mt-1">Your daily plan will be generated at 9pm.</p>
+          <p className="text-[14px] text-muted-foreground">No plan for today yet.</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Your daily plan will be generated at 9pm.</p>
         </div>
       )}
 
@@ -138,10 +140,10 @@ export default function Dashboard() {
           {/* Plan Summary */}
           {planSummary && !planDismissed && (
             <div className="rounded-[14px] bg-card p-4" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
-              <p className="text-xs font-medium mb-2" style={{ color: '#B8906C' }}>📋 Today's plan</p>
-              <p className="text-sm text-foreground leading-relaxed">{planSummary}</p>
+              <p className="text-[13px] font-medium mb-2" style={{ color: '#B8906C' }}>📋 Today's plan</p>
+              <p className="text-[14px] text-foreground leading-relaxed">{planSummary}</p>
               <div className="text-right mt-2">
-                <button onClick={dismissPlan} className="text-[11px] font-medium" style={{ color: '#B8906C' }}>
+                <button onClick={dismissPlan} className="text-[13px] font-medium min-h-[44px] md:min-h-0" style={{ color: '#B8906C' }}>
                   Got it, dismiss
                 </button>
               </div>
@@ -151,15 +153,15 @@ export default function Dashboard() {
           {/* Current Focus */}
           {currentItem && (
             <div>
-              <p className="text-[11px] text-muted-foreground font-medium tracking-wider mb-3">CURRENT FOCUS</p>
-              <div className="rounded-[18px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
+              <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider mb-3">CURRENT FOCUS</p>
+              <div className="rounded-[18px] bg-card p-4 md:p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
                 <div className="flex items-center justify-center gap-1.5 mb-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(currentItem.category) }} />
                   <span className="text-[11px] font-medium" style={{ color: getCategoryColor(currentItem.category) }}>
                     {currentItem.category || 'Buffer'}
                   </span>
                 </div>
-                <h2 className="text-xl font-medium text-foreground mb-1">{currentItem.title}</h2>
+                <h2 className="text-lg md:text-xl font-medium text-foreground mb-1">{currentItem.title}</h2>
                 <p className="text-[13px] text-muted-foreground mb-6">
                   {formatTime12h(currentItem.start_time)} — {formatTime12h(currentItem.end_time)}
                 </p>
@@ -172,15 +174,15 @@ export default function Dashboard() {
                 <div className="flex justify-center gap-3">
                   <button
                     onClick={() => handleCompleteItem(currentItem)}
-                    className="px-7 py-2.5 rounded-xl text-sm font-medium"
-                    style={{ backgroundColor: '#F5F0E8', color: '#8A8478' }}
+                    className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
+                    style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
                     Skip
                   </button>
                   <button
                     onClick={() => handleCompleteItem(currentItem)}
-                    className="px-7 py-2.5 rounded-xl text-sm font-medium"
-                    style={{ backgroundColor: '#2C2A25', color: '#F5F0E8' }}
+                    className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
+                    style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
                   >
                     Done
                   </button>
@@ -193,14 +195,14 @@ export default function Dashboard() {
           {upNextItems.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] text-muted-foreground font-medium tracking-wider">UP NEXT</p>
-                <p className="text-xs" style={{ color: '#B8906C' }}>{totalH}h {totalM}m planned today</p>
+                <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider">UP NEXT</p>
+                <p className="text-[13px]" style={{ color: '#B8906C' }}>{totalH}h {totalM}m planned today</p>
               </div>
               <div className="space-y-2">
                 {upNextItems.slice(0, 5).map((item, idx) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 rounded-r-[14px] rounded-l-none p-3.5"
+                    className="flex items-center gap-3 rounded-r-[14px] rounded-l-none p-3.5 min-h-[48px]"
                     style={{
                       backgroundColor: `rgba(255,255,255,${opacities[idx] ?? 0.35})`,
                       borderLeft: `4px solid ${getCategoryColor(item.category)}`,
@@ -208,12 +210,12 @@ export default function Dashboard() {
                   >
                     <button
                       onClick={() => handleCompleteItem(item)}
-                      className="w-[22px] h-[22px] rounded-[6px] border-2 flex-shrink-0 flex items-center justify-center"
-                      style={{ borderColor: '#D0CBC2' }}
+                      className="w-[22px] h-[22px] rounded-[6px] border-2 flex-shrink-0 flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
+                      style={{ borderColor: 'hsl(var(--border))' }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] truncate up-next-task-name">{item.title}</p>
-                      <p className="text-[11px] font-semibold up-next-time">
+                      <p className="text-[14px] md:text-[13px] up-next-task-name">{item.title}</p>
+                      <p className="text-[13px] md:text-[11px] font-semibold up-next-time">
                         {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
                       </p>
                     </div>
@@ -229,7 +231,7 @@ export default function Dashboard() {
           {/* Today's Wins */}
           <div className="rounded-[14px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(0,0,0,0.04)' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium wins-label">Today's wins</p>
+              <p className="text-[13px] font-medium wins-label">Today's wins</p>
               <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
                 {completedItems.length}/{planItems?.length ?? 0}
               </p>
@@ -239,20 +241,20 @@ export default function Dashboard() {
                 <div
                   key={item.id}
                   className="h-1 flex-1 rounded-sm"
-                  style={{ backgroundColor: i < completedItems.length ? '#B8906C' : '#D8D4CC' }}
+                  style={{ backgroundColor: i < completedItems.length ? '#B8906C' : 'hsl(var(--border))' }}
                 />
               ))}
             </div>
             {completedItems.length === 0 ? (
-              <p className="text-xs wins-text">No wins yet — let's go!</p>
+              <p className="text-[13px] wins-text">No wins yet — let's go!</p>
             ) : (
               <div className="space-y-2">
                 {completedItems.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2">
+                  <div key={item.id} className="flex items-center gap-2 min-h-[44px]">
                     <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#059669' }}>
                       <Check size={10} className="text-white" />
                     </div>
-                    <span className="text-xs truncate wins-text">{item.title}</span>
+                    <span className="text-[13px] truncate wins-text">{item.title}</span>
                   </div>
                 ))}
               </div>

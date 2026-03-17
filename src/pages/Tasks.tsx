@@ -19,15 +19,16 @@ export default function Tasks() {
   const { data: tasks, isLoading } = useTasks({ category, quadrant, status, search });
 
   return (
-    <div className="space-y-5 pb-4">
+    <div className="space-y-4 md:space-y-5 pb-24 md:pb-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[22px] md:text-[26px] font-medium text-foreground">Tasks</h1>
+        {/* Desktop add button */}
         <button
           onClick={() => setAddOpen(true)}
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ backgroundColor: '#2C2A25' }}
+          className="hidden md:flex w-10 h-10 rounded-full items-center justify-center"
+          style={{ backgroundColor: 'hsl(var(--foreground))' }}
         >
-          <Plus size={18} style={{ color: '#F5F0E8' }} />
+          <Plus size={18} style={{ color: 'hsl(var(--background))' }} />
         </button>
       </div>
 
@@ -39,19 +40,19 @@ export default function Tasks() {
             placeholder="Search tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-card rounded-xl border-border"
+            className="pl-9 bg-card rounded-xl border-border min-h-[44px] text-[15px] md:text-sm md:min-h-0"
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="flex-1 bg-card rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1 min-w-[120px] bg-card rounded-xl text-[13px] h-10 md:h-9 md:text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Categories</SelectItem>
               {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={quadrant} onValueChange={setQuadrant}>
-            <SelectTrigger className="flex-1 bg-card rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="flex-1 min-w-[120px] bg-card rounded-xl text-[13px] h-10 md:h-9 md:text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Quadrants</SelectItem>
               <SelectItem value="Do Now">Do Now</SelectItem>
@@ -61,7 +62,7 @@ export default function Tasks() {
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-[100px] bg-card rounded-xl text-xs h-9"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="min-w-[90px] bg-card rounded-xl text-[13px] h-10 md:h-9 md:text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
@@ -78,7 +79,7 @@ export default function Tasks() {
         </div>
       ) : !tasks?.length ? (
         <div className="rounded-[14px] bg-card p-8 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
-          <p className="text-sm text-muted-foreground">No tasks found</p>
+          <p className="text-[14px] text-muted-foreground">No tasks found</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -86,16 +87,15 @@ export default function Tasks() {
             <button
               key={task.id}
               onClick={() => setEditTask(task)}
-              className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-3.5 md:p-5 text-left transition-colors hover:opacity-90"
+              className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-4 md:p-5 text-left transition-colors active:opacity-80 md:hover:opacity-90 min-h-[56px]"
               style={{
-                borderLeft: `4px solid ${getCategoryColor(task.category)}`,
                 border: '0.5px solid rgba(0,0,0,0.04)',
                 borderLeftWidth: '4px',
                 borderLeftColor: getCategoryColor(task.category),
               }}
             >
               <div className="flex-1 min-w-0">
-                <p className="text-sm md:text-base font-medium text-foreground truncate md:whitespace-normal">{task.name || 'Untitled task'}</p>
+                <p className="text-[15px] md:text-base font-medium text-foreground">{task.name || 'Untitled task'}</p>
                 <div className="flex items-center gap-1.5 mt-1">
                   {task.category && (
                     <span
@@ -128,6 +128,15 @@ export default function Tasks() {
           ))}
         </div>
       )}
+
+      {/* Mobile FAB */}
+      <button
+        onClick={() => setAddOpen(true)}
+        className="md:hidden fixed bottom-[76px] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-40"
+        style={{ backgroundColor: 'hsl(var(--foreground))' }}
+      >
+        <Plus size={24} style={{ color: 'hsl(var(--background))' }} />
+      </button>
 
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
       <AddTaskModal open={addOpen} onOpenChange={setAddOpen} />
