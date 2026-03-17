@@ -1,10 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Inbox, ChevronRight, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { LifeContextModal } from '@/components/LifeContextModal';
 import { TaskEditModal } from '@/components/TaskEditModal';
+import { FocusTimer } from '@/components/FocusTimer';
 import { useTodayPlan, useTodayPlanItems, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
