@@ -143,7 +143,7 @@ export default function Dashboard() {
               <p className="text-xs font-medium mb-2" style={{ color: '#B8906C' }}>📋 Today's plan</p>
               <p className="text-sm text-foreground leading-relaxed">{planSummary}</p>
               <div className="text-right mt-2">
-                <button onClick={() => setPlanDismissed(true)} className="text-[11px] font-medium" style={{ color: '#B8906C' }}>
+                <button onClick={dismissPlan} className="text-[11px] font-medium" style={{ color: '#B8906C' }}>
                   Got it, dismiss
                 </button>
               </div>
