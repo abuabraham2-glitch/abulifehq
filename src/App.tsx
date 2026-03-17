@@ -26,7 +26,7 @@ const App = () => (
                 <Route path="/tasks" element={<Tasks />} />
                 <Route path="/matrix" element={<Matrix />} />
                 <Route path="/triage" element={<Triage />} />
-                <Route path="/more" element={<More />} />
+                
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>
