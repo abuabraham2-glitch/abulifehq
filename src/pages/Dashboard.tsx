@@ -62,8 +62,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 pb-4">
       {/* Greeting */}
-      <div className="md:flex md:items-start md:justify-between md:gap-8">
-        <div>
+      <div className="md:flex md:items-stretch md:justify-between md:gap-8">
+        <div className="flex-shrink-0">
           <p className="text-[13px] md:text-[14px] text-muted-foreground">{formatDate(new Date())}</p>
           <h1 className="text-[22px] md:text-[32px] md:font-semibold font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
 
@@ -89,12 +89,14 @@ export default function Dashboard() {
         </div>
 
         {/* Desktop-only quote */}
-        <p
-          className="hidden md:block text-[20px] italic text-right max-w-[340px] leading-relaxed mt-2"
-          style={{ color: '#B8906C', fontFamily: 'Georgia, "Times New Roman", serif' }}
-        >
-          "{phrase}"
-        </p>
+        <div className="hidden md:flex flex-1 items-center justify-center">
+          <p
+            className="text-[20px] italic text-center max-w-[340px] leading-relaxed"
+            style={{ color: '#B8906C', fontFamily: 'Georgia, "Times New Roman", serif' }}
+          >
+            "{phrase}"
+          </p>
+        </div>
       </div>
 
       {/* Triage Alert */}
