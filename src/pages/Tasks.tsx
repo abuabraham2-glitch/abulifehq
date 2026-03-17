@@ -86,7 +86,7 @@ export default function Tasks() {
             <button
               key={task.id}
               onClick={() => setEditTask(task)}
-              className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-3.5 text-left transition-colors hover:opacity-90"
+              className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-3.5 md:p-5 text-left transition-colors hover:opacity-90"
               style={{
                 borderLeft: `4px solid ${getCategoryColor(task.category)}`,
                 border: '0.5px solid rgba(0,0,0,0.04)',
