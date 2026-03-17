@@ -48,17 +48,7 @@ export default function Dashboard() {
   const totalH = Math.floor(totalPlannedMinutes / 60);
   const totalM = totalPlannedMinutes % 60;
 
-  // Timer state
-  const [minutesLeft, setMinutesLeft] = useState(0);
-  useEffect(() => {
-    if (currentItem?.est_minutes) setMinutesLeft(currentItem.est_minutes);
-  }, [currentItem]);
-
-  useEffect(() => {
-    if (minutesLeft <= 0) return;
-    const timer = setInterval(() => setMinutesLeft((m) => Math.max(0, m - 1)), 60000);
-    return () => clearInterval(timer);
-  }, [minutesLeft]);
+  // Timer removed — now handled by FocusTimer component
 
   const handleCompleteItem = async (item: PlanItem) => {
     if (item.task_id) {
