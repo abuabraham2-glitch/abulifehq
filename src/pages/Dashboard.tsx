@@ -9,13 +9,14 @@ import { useTodayPlan, useTodayPlanItems, type PlanItem } from '@/hooks/useDaily
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
 import { getGreeting, formatDate, getRandomPhrase, getCategoryColor } from '@/lib/constants';
+import { useAppContext } from '@/contexts/AppContext';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [lifeCtxOpen, setLifeCtxOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
-  const [planDismissed, setPlanDismissed] = useState(false);
+  const { planDismissed, dismissPlan } = useAppContext();
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -142,7 +143,7 @@ export default function Dashboard() {
               <p className="text-xs font-medium mb-2" style={{ color: '#B8906C' }}>📋 Today's plan</p>
               <p className="text-sm text-foreground leading-relaxed">{planSummary}</p>
               <div className="text-right mt-2">
-                <button onClick={() => setPlanDismissed(true)} className="text-[11px] font-medium" style={{ color: '#B8906C' }}>
+                <button onClick={dismissPlan} className="text-[11px] font-medium" style={{ color: '#B8906C' }}>
                   Got it, dismiss
                 </button>
               </div>
