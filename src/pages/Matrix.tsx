@@ -30,11 +30,11 @@ export default function Matrix() {
       <h1 className="text-[22px] font-medium text-foreground">Priority Matrix</h1>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-48 rounded-[14px]" />)}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {grouped.map(({ key, color, bg, tasks: qTasks }) => (
             <div
               key={key}
