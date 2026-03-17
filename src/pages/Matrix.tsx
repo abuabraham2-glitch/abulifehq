@@ -5,10 +5,10 @@ import { TaskEditModal } from '@/components/TaskEditModal';
 import { getCategoryColor, QUADRANT_LABELS } from '@/lib/constants';
 
 const QUADS = [
-  { key: 'Do Now', color: '#DC2626', bg: '#FEF2F2', darkBg: '#2A1515' },
-  { key: 'Schedule', color: '#2563EB', bg: '#EFF6FF', darkBg: '#151D2A' },
-  { key: 'Delegate', color: '#059669', bg: '#F0FDF4', darkBg: '#152A1D' },
-  { key: 'Delete', color: '#9CA3AF', bg: '#F9FAFB', darkBg: '#1F1F1F' },
+  { key: 'Do Now', color: '#DC2626' },
+  { key: 'Schedule', color: '#2563EB' },
+  { key: 'Delegate', color: '#059669' },
+  { key: 'Delete', color: '#9CA3AF' },
 ] as const;
 
 export default function Matrix() {
@@ -35,34 +35,34 @@ export default function Matrix() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {grouped.map(({ key, color, bg, tasks: qTasks }) => (
+          {grouped.map(({ key, color, tasks: qTasks }) => (
             <div
               key={key}
-              className="rounded-[14px] p-3.5 min-h-[200px] flex flex-col"
-              style={{ backgroundColor: bg, border: '0.5px solid rgba(0,0,0,0.04)' }}
+              className="rounded-[14px] p-3.5 min-h-[200px] flex flex-col matrix-quad"
+              style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
             >
               <div className="mb-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold" style={{ color }}>{key}</p>
                   <span className="text-xs font-medium" style={{ color }}>{qTasks.length}</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground">{QUADRANT_LABELS[key]}</p>
-                <p className="text-[10px] text-muted-foreground">{sumHours(qTasks)}h est.</p>
+                <p className="text-[10px] matrix-sub">{QUADRANT_LABELS[key]}</p>
+                <p className="text-[10px] matrix-sub">{sumHours(qTasks)}h est.</p>
               </div>
               <div className="flex-1 space-y-1.5 overflow-y-auto max-h-[300px]">
                 {qTasks.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No tasks</p>
+                  <p className="text-xs matrix-sub">No tasks</p>
                 ) : (
                   qTasks.map((task) => (
                     <button
                       key={task.id}
                       onClick={() => setEditTask(task)}
-                      className="w-full flex items-center gap-2 text-left p-1.5 rounded-lg hover:bg-white/50 transition-colors"
+                      className="w-full flex items-center gap-2 text-left p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-white/10 transition-colors"
                     >
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(task.category) }} />
-                      <span className="text-sm text-foreground truncate flex-1">{task.name || 'Untitled task'}</span>
+                      <span className="text-sm truncate flex-1 matrix-task-name">{task.name || 'Untitled task'}</span>
                       {task.est_minutes && (
-                        <span className="text-[11px] text-muted-foreground flex-shrink-0">{task.est_minutes}m</span>
+                        <span className="text-[11px] flex-shrink-0 matrix-minutes">{task.est_minutes}m</span>
                       )}
                     </button>
                   ))
