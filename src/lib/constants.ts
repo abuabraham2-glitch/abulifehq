@@ -53,6 +53,18 @@ export function formatDate(d: Date): string {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
+/** Convert "HH:MM" or "HH:MM:SS" 24h string to "h:MM AM/PM" */
+export function formatTime12h(time?: string | null): string {
+  if (!time) return '';
+  const [hStr, mStr] = time.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  if (h === 0) h = 12;
+  else if (h > 12) h -= 12;
+  return `${h}:${m} ${ampm}`;
+}
+
 export const MOTIVATIONAL_PHRASES = [
   "Small steps lead to big changes.",
   "You're doing better than you think.",

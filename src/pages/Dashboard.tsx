@@ -9,7 +9,7 @@ import { FocusTimer } from '@/components/FocusTimer';
 import { useTodayPlan, useTodayPlanItems, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
-import { getGreeting, formatDate, getRandomPhrase, getCategoryColor } from '@/lib/constants';
+import { getGreeting, formatDate, getRandomPhrase, getCategoryColor, formatTime12h } from '@/lib/constants';
 import { useAppContext } from '@/contexts/AppContext';
 
 export default function Dashboard() {
@@ -26,7 +26,6 @@ export default function Dashboard() {
 
   const [phrase] = useState(getRandomPhrase);
 
-  // Current focus: first non-completed plan item
   const currentItem = useMemo(() => {
     return planItems?.find((i) => i.status !== 'completed') ?? null;
   }, [planItems]);
@@ -47,8 +46,6 @@ export default function Dashboard() {
 
   const totalH = Math.floor(totalPlannedMinutes / 60);
   const totalM = totalPlannedMinutes % 60;
-
-  // Timer removed — now handled by FocusTimer component
 
   const handleCompleteItem = async (item: PlanItem) => {
     if (item.task_id) {
@@ -150,10 +147,9 @@ export default function Dashboard() {
                 </div>
                 <h2 className="text-xl font-medium text-foreground mb-1">{currentItem.title}</h2>
                 <p className="text-[13px] text-muted-foreground mb-6">
-                  {currentItem.start_time?.slice(0, 5)} — {currentItem.end_time?.slice(0, 5)}
+                  {formatTime12h(currentItem.start_time)} — {formatTime12h(currentItem.end_time)}
                 </p>
 
-                {/* Timer ring */}
                 <FocusTimer
                   estMinutes={currentItem.est_minutes || 25}
                   category={currentItem.category}
@@ -202,9 +198,9 @@ export default function Dashboard() {
                       style={{ borderColor: '#D0CBC2' }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] truncate" style={{ color: '#6B6560' }}>{item.title}</p>
-                      <p className="text-[11px] font-semibold" style={{ color: '#2C2A25' }}>
-                        {item.start_time?.slice(0, 5)} — {item.end_time?.slice(0, 5)}
+                      <p className="text-[13px] truncate up-next-task-name">{item.title}</p>
+                      <p className="text-[11px] font-semibold up-next-time">
+                        {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
                       </p>
                     </div>
                     <span className="text-[15px] font-medium flex-shrink-0" style={{ color: getCategoryColor(item.category) }}>
@@ -219,12 +215,11 @@ export default function Dashboard() {
           {/* Today's Wins */}
           <div className="rounded-[14px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(0,0,0,0.04)' }}>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium" style={{ color: '#6B6560' }}>Today's wins</p>
-              <p className="text-[13px] font-medium" style={{ color: '#B8906C' }}>
+              <p className="text-xs font-medium wins-label">Today's wins</p>
+              <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
                 {completedItems.length}/{planItems?.length ?? 0}
               </p>
             </div>
-            {/* Progress segments */}
             <div className="flex gap-1 mb-3">
               {planItems?.map((item, i) => (
                 <div
@@ -235,7 +230,7 @@ export default function Dashboard() {
               ))}
             </div>
             {completedItems.length === 0 ? (
-              <p className="text-xs" style={{ color: '#6B6560' }}>No wins yet — let's go!</p>
+              <p className="text-xs wins-text">No wins yet — let's go!</p>
             ) : (
               <div className="space-y-2">
                 {completedItems.map((item) => (
@@ -243,7 +238,7 @@ export default function Dashboard() {
                     <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#059669' }}>
                       <Check size={10} className="text-white" />
                     </div>
-                    <span className="text-xs truncate" style={{ color: '#6B6560' }}>{item.title}</span>
+                    <span className="text-xs truncate wins-text">{item.title}</span>
                   </div>
                 ))}
               </div>

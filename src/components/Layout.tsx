@@ -1,18 +1,19 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, ListTodo, Grid3X3, Inbox, Settings } from 'lucide-react';
+import { Home, ListTodo, Grid3X3, Inbox, Moon, Sun } from 'lucide-react';
 import { useTriageCount } from '@/hooks/useTriageQueue';
+import { useTheme } from '@/components/ThemeProvider';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/tasks', icon: ListTodo, label: 'Tasks' },
   { to: '/matrix', icon: Grid3X3, label: 'Matrix' },
   { to: '/triage', icon: Inbox, label: 'Triage', showBadge: true },
-  { to: '/more', icon: Settings, label: 'More' },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { data: triageCount = 0 } = useTriageCount();
+  const { theme, toggle } = useTheme();
 
   return (
     <div className="min-h-screen bg-background pb-[80px]">
@@ -50,6 +51,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </NavLink>
             );
           })}
+
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggle}
+            className="relative flex flex-col items-center py-3 px-4 min-w-[56px] transition-colors"
+          >
+            {theme === 'light' ? (
+              <Moon size={22} strokeWidth={2} className="text-muted-foreground" />
+            ) : (
+              <Sun size={22} strokeWidth={2} className="text-muted-foreground" />
+            )}
+            <span className="text-[10px] mt-1 text-muted-foreground">
+              {theme === 'light' ? 'Dark' : 'Light'}
+            </span>
+          </button>
         </div>
       </nav>
     </div>

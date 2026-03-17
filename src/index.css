@@ -74,3 +74,25 @@
     font-family: system-ui, -apple-system, sans-serif;
   }
 }
+
+/* Dark-mode readability overrides for dashboard cards with white-alpha backgrounds */
+.dark .up-next-task-name { color: #E8E4DC; }
+.dark .up-next-time { color: #FFFFFF; }
+.dark .wins-label { color: #E8E4DC; }
+.dark .wins-text { color: #E8E4DC; }
+
+/* Matrix dark mode */
+.dark .matrix-quad { background-color: #242220; }
+.dark .matrix-task-name { color: #E8E4DC; }
+.dark .matrix-minutes { color: #D0CBC2; }
+.dark .matrix-sub { color: #A8A29E; }
+
+/* Light mode defaults for the utility classes */
+.up-next-task-name { color: #6B6560; }
+.up-next-time { color: #2C2A25; }
+.wins-label { color: #6B6560; }
+.wins-text { color: #6B6560; }
+.matrix-quad { background-color: #F9FAFB; }
+.matrix-task-name { color: hsl(var(--foreground)); }
+.matrix-minutes { color: hsl(var(--muted-foreground)); }
+.matrix-sub { color: hsl(var(--muted-foreground)); }
