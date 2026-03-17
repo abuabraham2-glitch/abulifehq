@@ -26,8 +26,8 @@ export default function Matrix() {
   };
 
   return (
-    <div className="space-y-5 pb-4">
-      <h1 className="text-[22px] md:text-[26px] font-medium text-foreground">Priority Matrix</h1>
+    <div className="space-y-5 pb-4 md:-mx-5">
+      <h1 className="text-[22px] md:text-[26px] font-medium text-foreground md:px-5">Priority Matrix</h1>
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
