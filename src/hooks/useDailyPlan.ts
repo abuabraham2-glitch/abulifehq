@@ -40,3 +40,18 @@ export function useTodayPlanItems() {
     },
   });
 }
+
+export function useUpdatePlanItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status, actual_minutes }: { id: string; status: string; actual_minutes?: number }) => {
+      const update: Record<string, unknown> = { status };
+      if (actual_minutes !== undefined) update.actual_minutes = actual_minutes;
+      const { error } = await supabase.from('plan_items').update(update).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    },
+  });
+}

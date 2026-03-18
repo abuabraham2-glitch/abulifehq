@@ -61,7 +61,13 @@ export function FocusTimer({ estMinutes, category, onElapsedChange }: FocusTimer
 
   const totalSeconds = estMinutes * 60;
   const elapsed = totalSeconds - secondsLeft;
+  const elapsedMinutes = Math.ceil(elapsed / 60);
   const progress = totalSeconds > 0 ? (elapsed / totalSeconds) * 100 : 0;
+
+  // Report elapsed minutes to parent
+  useEffect(() => {
+    onElapsedChange?.(elapsedMinutes);
+  }, [elapsedMinutes, onElapsedChange]);
   const circumference = 2 * Math.PI * 52;
   const displayMinutes = Math.ceil(secondsLeft / 60);
   const color = getCategoryColor(category);
