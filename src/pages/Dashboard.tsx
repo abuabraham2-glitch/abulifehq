@@ -184,18 +184,19 @@ export default function Dashboard() {
                 <FocusTimer
                   estMinutes={currentItem.est_minutes || 25}
                   category={currentItem.category}
+                  onElapsedChange={handleElapsedChange}
                 />
 
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => handleCompleteItem(currentItem)}
+                    onClick={() => handleSkip(currentItem)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
                     Skip
                   </button>
                   <button
-                    onClick={() => handleCompleteItem(currentItem)}
+                    onClick={() => handleDone(currentItem)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
                   >
