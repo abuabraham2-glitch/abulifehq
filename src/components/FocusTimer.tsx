@@ -5,9 +5,10 @@ import { toast } from '@/hooks/use-toast';
 interface FocusTimerProps {
   estMinutes: number;
   category?: string | null;
+  onElapsedChange?: (minutes: number) => void;
 }
 
-export function FocusTimer({ estMinutes, category }: FocusTimerProps) {
+export function FocusTimer({ estMinutes, category, onElapsedChange }: FocusTimerProps) {
   const [secondsLeft, setSecondsLeft] = useState(estMinutes * 60);
   const [running, setRunning] = useState(false);
   const [started, setStarted] = useState(false);
@@ -60,7 +61,13 @@ export function FocusTimer({ estMinutes, category }: FocusTimerProps) {
 
   const totalSeconds = estMinutes * 60;
   const elapsed = totalSeconds - secondsLeft;
+  const elapsedMinutes = Math.ceil(elapsed / 60);
   const progress = totalSeconds > 0 ? (elapsed / totalSeconds) * 100 : 0;
+
+  // Report elapsed minutes to parent
+  useEffect(() => {
+    onElapsedChange?.(elapsedMinutes);
+  }, [elapsedMinutes, onElapsedChange]);
   const circumference = 2 * Math.PI * 52;
   const displayMinutes = Math.ceil(secondsLeft / 60);
   const color = getCategoryColor(category);

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -37,6 +37,21 @@ export function useTodayPlanItems() {
         .order('sort_order', { ascending: true });
       if (error) throw error;
       return data as PlanItem[];
+    },
+  });
+}
+
+export function useUpdatePlanItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status, actual_minutes }: { id: string; status: string; actual_minutes?: number }) => {
+      const update: Record<string, unknown> = { status };
+      if (actual_minutes !== undefined) update.actual_minutes = actual_minutes;
+      const { error } = await supabase.from('plan_items').update(update).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
     },
   });
 }

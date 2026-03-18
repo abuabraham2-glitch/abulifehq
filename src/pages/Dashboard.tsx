@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Inbox, ChevronRight, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -6,7 +6,7 @@ import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { LifeContextModal } from '@/components/LifeContextModal';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
-import { useTodayPlan, useTodayPlanItems, type PlanItem } from '@/hooks/useDailyPlan';
+import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
 import { getGreeting, formatDate, getRandomPhrase, getCategoryColor, formatTime12h } from '@/lib/constants';
@@ -23,17 +23,23 @@ export default function Dashboard() {
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
   const { data: triageCount = 0 } = useTriageCount();
   const completeTask = useCompleteTask();
+  const updatePlanItem = useUpdatePlanItem();
+  const elapsedRef = useRef(0);
+
+  const handleElapsedChange = useCallback((minutes: number) => {
+    elapsedRef.current = minutes;
+  }, []);
 
   const [phrase] = useState(getRandomPhrase);
 
   const currentItem = useMemo(() => {
-    return planItems?.find((i) => i.status !== 'completed') ?? null;
+    return planItems?.find((i) => i.status !== 'completed' && i.status !== 'skipped') ?? null;
   }, [planItems]);
 
   const upNextItems = useMemo(() => {
     if (!planItems || !currentItem) return [];
     const idx = planItems.indexOf(currentItem);
-    return planItems.slice(idx + 1).filter((i) => i.status !== 'completed');
+    return planItems.slice(idx + 1).filter((i) => i.status !== 'completed' && i.status !== 'skipped');
   }, [planItems, currentItem]);
 
   const completedItems = useMemo(() => {
@@ -47,10 +53,19 @@ export default function Dashboard() {
   const totalH = Math.floor(totalPlannedMinutes / 60);
   const totalM = totalPlannedMinutes % 60;
 
-  const handleCompleteItem = async (item: PlanItem) => {
+  const handleDone = async (item: PlanItem) => {
+    await updatePlanItem.mutateAsync({
+      id: item.id,
+      status: 'completed',
+      actual_minutes: elapsedRef.current || undefined,
+    });
     if (item.task_id) {
       await completeTask.mutateAsync(item.task_id);
     }
+  };
+
+  const handleSkip = async (item: PlanItem) => {
+    await updatePlanItem.mutateAsync({ id: item.id, status: 'skipped' });
   };
 
   const loading = loadingPlan || loadingItems;
@@ -169,18 +184,19 @@ export default function Dashboard() {
                 <FocusTimer
                   estMinutes={currentItem.est_minutes || 25}
                   category={currentItem.category}
+                  onElapsedChange={handleElapsedChange}
                 />
 
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => handleCompleteItem(currentItem)}
+                    onClick={() => handleSkip(currentItem)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
                     Skip
                   </button>
                   <button
-                    onClick={() => handleCompleteItem(currentItem)}
+                    onClick={() => handleDone(currentItem)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
                   >
@@ -209,7 +225,7 @@ export default function Dashboard() {
                     }}
                   >
                     <button
-                      onClick={() => handleCompleteItem(item)}
+                      onClick={() => handleDone(item)}
                       className="w-[22px] h-[22px] rounded-[6px] border-2 flex-shrink-0 flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                       style={{ borderColor: 'hsl(var(--border))' }}
                     />
