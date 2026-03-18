@@ -23,6 +23,12 @@ export default function Dashboard() {
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
   const { data: triageCount = 0 } = useTriageCount();
   const completeTask = useCompleteTask();
+  const updatePlanItem = useUpdatePlanItem();
+  const elapsedRef = useRef(0);
+
+  const handleElapsedChange = useCallback((minutes: number) => {
+    elapsedRef.current = minutes;
+  }, []);
 
   const [phrase] = useState(getRandomPhrase);
 
