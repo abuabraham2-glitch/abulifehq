@@ -53,10 +53,19 @@ export default function Dashboard() {
   const totalH = Math.floor(totalPlannedMinutes / 60);
   const totalM = totalPlannedMinutes % 60;
 
-  const handleCompleteItem = async (item: PlanItem) => {
+  const handleDone = async (item: PlanItem) => {
+    await updatePlanItem.mutateAsync({
+      id: item.id,
+      status: 'completed',
+      actual_minutes: elapsedRef.current || undefined,
+    });
     if (item.task_id) {
       await completeTask.mutateAsync(item.task_id);
     }
+  };
+
+  const handleSkip = async (item: PlanItem) => {
+    await updatePlanItem.mutateAsync({ id: item.id, status: 'skipped' });
   };
 
   const loading = loadingPlan || loadingItems;
