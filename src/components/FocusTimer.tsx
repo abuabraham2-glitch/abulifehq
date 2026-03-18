@@ -8,7 +8,7 @@ interface FocusTimerProps {
   onElapsedChange?: (minutes: number) => void;
 }
 
-export function FocusTimer({ estMinutes, category }: FocusTimerProps) {
+export function FocusTimer({ estMinutes, category, onElapsedChange }: FocusTimerProps) {
   const [secondsLeft, setSecondsLeft] = useState(estMinutes * 60);
   const [running, setRunning] = useState(false);
   const [started, setStarted] = useState(false);
