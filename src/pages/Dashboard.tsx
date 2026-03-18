@@ -33,13 +33,13 @@ export default function Dashboard() {
   const [phrase] = useState(getRandomPhrase);
 
   const currentItem = useMemo(() => {
-    return planItems?.find((i) => i.status !== 'completed') ?? null;
+    return planItems?.find((i) => i.status !== 'completed' && i.status !== 'skipped') ?? null;
   }, [planItems]);
 
   const upNextItems = useMemo(() => {
     if (!planItems || !currentItem) return [];
     const idx = planItems.indexOf(currentItem);
-    return planItems.slice(idx + 1).filter((i) => i.status !== 'completed');
+    return planItems.slice(idx + 1).filter((i) => i.status !== 'completed' && i.status !== 'skipped');
   }, [planItems, currentItem]);
 
   const completedItems = useMemo(() => {
