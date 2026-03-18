@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 interface FocusTimerProps {
   estMinutes: number;
   category?: string | null;
+  onElapsedChange?: (minutes: number) => void;
 }
 
 export function FocusTimer({ estMinutes, category }: FocusTimerProps) {
