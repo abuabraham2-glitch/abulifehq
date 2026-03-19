@@ -1,12 +1,23 @@
 import { useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useTasks, type Task } from '@/hooks/useTasks';
+import { Button } from '@/components/ui/button';
+import { useTasks, usePurgeArchivedTasks, type Task } from '@/hooks/useTasks';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { AddTaskModal } from '@/components/AddTaskModal';
 import { CATEGORIES, getCategoryColor, getQuadrantColor } from '@/lib/constants';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Tasks() {
   const [category, setCategory] = useState('All');
@@ -15,21 +26,42 @@ export default function Tasks() {
   const [search, setSearch] = useState('');
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
 
   const { data: tasks, isLoading } = useTasks({ category, quadrant, status, search });
+  const purgeArchived = usePurgeArchivedTasks();
+
+  const handlePurge = () => {
+    purgeArchived.mutate(undefined, {
+      onSuccess: () => setPurgeOpen(false),
+    });
+  };
 
   return (
     <div className="space-y-4 md:space-y-5 pb-24 md:pb-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[22px] md:text-[26px] font-medium text-foreground">Tasks</h1>
-        {/* Desktop add button */}
-        <button
-          onClick={() => setAddOpen(true)}
-          className="hidden md:flex w-10 h-10 rounded-full items-center justify-center"
-          style={{ backgroundColor: 'hsl(var(--foreground))' }}
-        >
-          <Plus size={18} style={{ color: 'hsl(var(--background))' }} />
-        </button>
+        <div className="flex items-center gap-2">
+          {status === 'Archived' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => setPurgeOpen(true)}
+            >
+              <Trash2 size={14} className="mr-1" />
+              Purge All
+            </Button>
+          )}
+          {/* Desktop add button */}
+          <button
+            onClick={() => setAddOpen(true)}
+            className="hidden md:flex w-10 h-10 rounded-full items-center justify-center"
+            style={{ backgroundColor: 'hsl(var(--foreground))' }}
+          >
+            <Plus size={18} style={{ color: 'hsl(var(--background))' }} />
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -66,6 +98,7 @@ export default function Tasks() {
             <SelectContent>
               <SelectItem value="Active">Active</SelectItem>
               <SelectItem value="Completed">Completed</SelectItem>
+              <SelectItem value="Archived">Archived</SelectItem>
               <SelectItem value="All">All</SelectItem>
             </SelectContent>
           </Select>
@@ -140,6 +173,27 @@ export default function Tasks() {
 
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
       <AddTaskModal open={addOpen} onOpenChange={setAddOpen} />
+
+      {/* Purge Confirmation Dialog */}
+      <AlertDialog open={purgeOpen} onOpenChange={setPurgeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Purge Archived Tasks</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all archived tasks. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePurge}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {purgeArchived.isPending ? 'Deleting...' : 'Delete All'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

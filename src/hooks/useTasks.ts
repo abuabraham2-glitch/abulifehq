@@ -113,3 +113,21 @@ export function useDeleteTask() {
     },
   });
 }
+
+export function usePurgeArchivedTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('status', 'archived');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      qc.invalidateQueries({ queryKey: ['triage'] });
+      qc.invalidateQueries({ queryKey: ['daily-plan'] });
+    },
+  });
+}
