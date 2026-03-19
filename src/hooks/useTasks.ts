@@ -24,8 +24,10 @@ export function useTasks(filters?: {
         query = query.eq('status', 'active');
       } else if (filters?.status === 'Completed') {
         query = query.eq('status', 'completed');
+      } else if (filters?.status === 'Archived') {
+        query = query.eq('status', 'archived');
       } else if (!filters?.status || filters.status === 'All') {
-        query = query.in('status', ['active', 'completed']);
+        query = query.in('status', ['active', 'completed', 'archived']);
       }
       if (filters?.search) {
         query = query.ilike('name', `%${filters.search}%`);
