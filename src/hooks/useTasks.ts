@@ -24,8 +24,10 @@ export function useTasks(filters?: {
         query = query.eq('status', 'active');
       } else if (filters?.status === 'Completed') {
         query = query.eq('status', 'completed');
+      } else if (filters?.status === 'Archived') {
+        query = query.eq('status', 'archived');
       } else if (!filters?.status || filters.status === 'All') {
-        query = query.in('status', ['active', 'completed']);
+        query = query.in('status', ['active', 'completed', 'archived']);
       }
       if (filters?.search) {
         query = query.ilike('name', `%${filters.search}%`);
@@ -102,6 +104,24 @@ export function useDeleteTask() {
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      qc.invalidateQueries({ queryKey: ['triage'] });
+      qc.invalidateQueries({ queryKey: ['daily-plan'] });
+    },
+  });
+}
+
+export function usePurgeArchivedTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('status', 'archived');
       if (error) throw error;
     },
     onSuccess: () => {
