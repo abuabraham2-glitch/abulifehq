@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [lifeCtxOpen, setLifeCtxOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const { planDismissed, dismissPlan } = useAppContext();
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
