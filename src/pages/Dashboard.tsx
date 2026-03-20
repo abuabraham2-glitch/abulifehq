@@ -34,15 +34,31 @@ export default function Dashboard() {
 
   const [phrase] = useState(getRandomPhrase);
 
-  const currentItem = useMemo(() => {
-    return planItems?.find((i) => i.status !== 'completed' && i.status !== 'skipped') ?? null;
+  const nowPacificTime = useMemo(() => {
+    const now = new Date();
+    const pac = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+    const h = String(pac.getHours()).padStart(2, '0');
+    const m = String(pac.getMinutes()).padStart(2, '0');
+    return `${h}:${m}:00`;
+  }, []);
+
+  const pendingItems = useMemo(() => {
+    return planItems?.filter((i) => i.status !== 'completed' && i.status !== 'skipped') ?? [];
   }, [planItems]);
 
+  const currentItem = useMemo(() => {
+    const upcoming = pendingItems.find((i) => i.start_time >= nowPacificTime);
+    if (upcoming) return { item: upcoming, overdue: false };
+    // All pending are in the past — show first as fallback
+    if (pendingItems.length > 0) return { item: pendingItems[0], overdue: true };
+    return null;
+  }, [pendingItems, nowPacificTime]);
+
   const upNextItems = useMemo(() => {
-    if (!planItems || !currentItem) return [];
-    const idx = planItems.indexOf(currentItem);
-    return planItems.slice(idx + 1).filter((i) => i.status !== 'completed' && i.status !== 'skipped');
-  }, [planItems, currentItem]);
+    if (!currentItem) return [];
+    const idx = pendingItems.indexOf(currentItem.item);
+    return pendingItems.slice(idx + 1).filter((i) => i.start_time >= nowPacificTime);
+  }, [pendingItems, currentItem, nowPacificTime]);
 
   const completedItems = useMemo(() => {
     return planItems?.filter((i) => i.status === 'completed') ?? [];
