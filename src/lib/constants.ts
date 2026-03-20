@@ -43,13 +43,14 @@ export function calcQuadrant(importance?: string | null, urgency?: string | null
 }
 
 export function getGreeting(): string {
-  const h = new Date().getHours();
+  const h = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })).getHours();
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
 
-export function formatDate(d: Date): string {
+export function formatDate(_d?: Date): string {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
