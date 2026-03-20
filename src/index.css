@@ -105,3 +105,5 @@
 /* Hide scrollbar for tab bars */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.plan-chat-input::placeholder { color: #8B7D6B; opacity: 1; }
