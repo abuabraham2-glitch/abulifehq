@@ -284,7 +284,7 @@ export default function Dashboard() {
       )}
 
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
-      <LifeContextModal open={lifeCtxOpen} onOpenChange={setLifeCtxOpen} />
+      
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
       <SkipReasonModal
         open={!!skipItem}
