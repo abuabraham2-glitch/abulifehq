@@ -34,15 +34,31 @@ export default function Dashboard() {
 
   const [phrase] = useState(getRandomPhrase);
 
-  const currentItem = useMemo(() => {
-    return planItems?.find((i) => i.status !== 'completed' && i.status !== 'skipped') ?? null;
+  const nowPacificTime = useMemo(() => {
+    const now = new Date();
+    const pac = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+    const h = String(pac.getHours()).padStart(2, '0');
+    const m = String(pac.getMinutes()).padStart(2, '0');
+    return `${h}:${m}:00`;
+  }, []);
+
+  const pendingItems = useMemo(() => {
+    return planItems?.filter((i) => i.status !== 'completed' && i.status !== 'skipped') ?? [];
   }, [planItems]);
 
+  const currentItem = useMemo(() => {
+    const upcoming = pendingItems.find((i) => i.start_time >= nowPacificTime);
+    if (upcoming) return { item: upcoming, overdue: false };
+    // All pending are in the past — show first as fallback
+    if (pendingItems.length > 0) return { item: pendingItems[0], overdue: true };
+    return null;
+  }, [pendingItems, nowPacificTime]);
+
   const upNextItems = useMemo(() => {
-    if (!planItems || !currentItem) return [];
-    const idx = planItems.indexOf(currentItem);
-    return planItems.slice(idx + 1).filter((i) => i.status !== 'completed' && i.status !== 'skipped');
-  }, [planItems, currentItem]);
+    if (!currentItem) return [];
+    const idx = pendingItems.indexOf(currentItem.item);
+    return pendingItems.slice(idx + 1).filter((i) => i.start_time >= nowPacificTime);
+  }, [pendingItems, currentItem, nowPacificTime]);
 
   const completedItems = useMemo(() => {
     return planItems?.filter((i) => i.status === 'completed') ?? [];
@@ -175,32 +191,36 @@ export default function Dashboard() {
               <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider mb-3">CURRENT FOCUS</p>
               <div className="rounded-[18px] bg-card p-4 md:p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
                 <div className="flex items-center justify-center gap-1.5 mb-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(currentItem.category) }} />
-                  <span className="text-[11px] font-medium" style={{ color: getCategoryColor(currentItem.category) }}>
-                    {currentItem.category || 'Buffer'}
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(currentItem.item.category) }} />
+                  <span className="text-[11px] font-medium" style={{ color: getCategoryColor(currentItem.item.category) }}>
+                    {currentItem.item.category || 'Buffer'}
                   </span>
                 </div>
-                <h2 className="text-lg md:text-xl font-medium text-foreground mb-1">{currentItem.title}</h2>
-                <p className="text-[13px] text-muted-foreground mb-6">
-                  {formatTime12h(currentItem.start_time)} — {formatTime12h(currentItem.end_time)}
+                <h2 className="text-lg md:text-xl font-medium text-foreground mb-1">{currentItem.item.title}</h2>
+                <p className="text-[13px] text-muted-foreground mb-1">
+                  {formatTime12h(currentItem.item.start_time)} — {formatTime12h(currentItem.item.end_time)}
                 </p>
+                {currentItem.overdue && (
+                  <p className="text-[11px] font-medium text-destructive mb-4">Overdue</p>
+                )}
+                {!currentItem.overdue && <div className="mb-5" />}
 
                 <FocusTimer
-                  estMinutes={currentItem.est_minutes || 25}
-                  category={currentItem.category}
+                  estMinutes={currentItem.item.est_minutes || 25}
+                  category={currentItem.item.category}
                   onElapsedChange={handleElapsedChange}
                 />
 
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => setSkipItem(currentItem)}
+                    onClick={() => setSkipItem(currentItem.item)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
                     Skip
                   </button>
                   <button
-                    onClick={() => handleDone(currentItem)}
+                    onClick={() => handleDone(currentItem.item)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
                   >
