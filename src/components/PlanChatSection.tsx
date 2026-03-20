@@ -85,15 +85,16 @@ export function PlanChatSection({ planId }: Props) {
       )}
 
       {/* Input row */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 rounded-full p-1.5" style={{ backgroundColor: '#fff', border: '1px solid #D4C5B0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Change your plan or add life context..."
           disabled={loading}
-          className="flex-1 rounded-full border px-4 py-2.5 text-[13px] bg-background min-h-[44px] focus:outline-none focus:ring-2 focus:ring-ring"
-          style={{ borderColor: 'hsl(var(--border))' }}
+          className="flex-1 rounded-full px-3.5 py-2 text-[16px] bg-transparent min-h-[40px] focus:outline-none border-none outline-none"
+          style={{ color: 'hsl(var(--foreground))', caretColor: '#B8906C' }}
+        />
         />
         <button
           onClick={handleSend}
