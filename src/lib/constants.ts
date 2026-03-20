@@ -49,7 +49,8 @@ export function getGreeting(): string {
   return 'Good evening';
 }
 
-export function formatDate(d: Date): string {
+export function formatDate(_d?: Date): string {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
