@@ -95,7 +95,6 @@ export function PlanChatSection({ planId }: Props) {
           className="flex-1 rounded-full px-3.5 py-2 text-[16px] bg-transparent min-h-[40px] focus:outline-none border-none outline-none"
           style={{ color: 'hsl(var(--foreground))', caretColor: '#B8906C' }}
         />
-        />
         <button
           onClick={handleSend}
           disabled={!input.trim() || loading}
