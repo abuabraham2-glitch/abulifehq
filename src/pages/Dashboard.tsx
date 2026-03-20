@@ -66,8 +66,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleSkip = async (item: PlanItem) => {
-    await updatePlanItem.mutateAsync({ id: item.id, status: 'skipped' });
+  const handleSkip = async (item: PlanItem, reason?: string) => {
+    await updatePlanItem.mutateAsync({
+      id: item.id,
+      status: 'skipped',
+      skip_reason: reason,
+      task_id: item.task_id,
+    });
+    setSkipItem(null);
   };
 
   const loading = loadingPlan || loadingItems;
