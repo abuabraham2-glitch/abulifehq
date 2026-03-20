@@ -1,0 +1,109 @@
+import { useState, useRef, useEffect } from 'react';
+import { Send, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
+
+interface ChatMessage {
+  role: 'user' | 'ai';
+  text: string;
+}
+
+interface Props {
+  planId: string | null;
+}
+
+export function PlanChatSection({ planId }: Props) {
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text || loading) return;
+
+    setMessages((prev) => [...prev, { role: 'user', text }]);
+    setInput('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-revision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, planId }),
+      });
+      const data = await res.json();
+
+      if (data.action === 'revision') {
+        toast({ title: data.message || 'Plan updated ✓' });
+        queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+      } else if (data.action === 'answer') {
+        setMessages((prev) => [...prev, { role: 'ai', text: data.message }]);
+      } else {
+        setMessages((prev) => [...prev, { role: 'ai', text: data.message || 'Done.' }]);
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Could not reach the server.', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Chat history */}
+      {messages.length > 0 && (
+        <div className="space-y-2 max-h-[240px] overflow-y-auto px-1">
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed"
+                style={
+                  msg.role === 'user'
+                    ? { backgroundColor: '#B8906C', color: '#fff' }
+                    : { backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', border: '0.5px solid rgba(0,0,0,0.06)' }
+                }
+              >
+                {msg.text}
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      {/* Input row */}
+      <div className="flex items-center gap-2">
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Change your plan or add life context..."
+          disabled={loading}
+          className="flex-1 rounded-full border px-4 py-2.5 text-[13px] bg-background min-h-[44px] focus:outline-none focus:ring-2 focus:ring-ring"
+          style={{ borderColor: 'hsl(var(--border))' }}
+        />
+        <button
+          onClick={handleSend}
+          disabled={!input.trim() || loading}
+          className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40 min-w-[44px] min-h-[44px]"
+          style={{ backgroundColor: '#B8906C', color: '#fff' }}
+        >
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        </button>
+      </div>
+    </div>
+  );
+}
