@@ -166,6 +166,9 @@ export default function Dashboard() {
             </div>
           )}
 
+          {/* Chat input for plan revisions */}
+          <PlanChatSection planId={plan?.id ?? null} />
+
           {/* Current Focus */}
           {currentItem && (
             <div>
