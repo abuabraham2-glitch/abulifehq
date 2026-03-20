@@ -37,17 +37,37 @@ export function PlanChatSection({ planId }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text, planId }),
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      console.log('Raw webhook response:', rawText);
+
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // Try extracting JSON from potential markdown wrapper
+        const jsonStart = rawText.search(/[\{\[]/);
+        const jsonEnd = rawText.lastIndexOf(jsonStart !== -1 && rawText[jsonStart] === '[' ? ']' : '}');
+        if (jsonStart !== -1 && jsonEnd !== -1) {
+          data = JSON.parse(rawText.substring(jsonStart, jsonEnd + 1));
+        } else {
+          throw new Error('Could not parse response');
+        }
+      }
+      console.log('Parsed webhook response:', data);
+
+      const msg = data.message || 'Done.';
 
       if (data.action === 'revision') {
-        toast({ title: data.message || 'Plan updated ✓' });
+        setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
+        toast({ title: msg });
         queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
       } else if (data.action === 'answer') {
-        setMessages((prev) => [...prev, { role: 'ai', text: data.message }]);
+        setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
       } else {
-        setMessages((prev) => [...prev, { role: 'ai', text: data.message || 'Done.' }]);
+        setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
       }
-    } catch {
+    } catch (e) {
+      console.error('Webhook error:', e);
       toast({ title: 'Error', description: 'Could not reach the server.', variant: 'destructive' });
     } finally {
       setLoading(false);
