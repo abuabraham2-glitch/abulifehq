@@ -16,7 +16,7 @@ import { useAppContext } from '@/contexts/AppContext';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
-  const [lifeCtxOpen, setLifeCtxOpen] = useState(false);
+  
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const { planDismissed, dismissPlan } = useAppContext();
