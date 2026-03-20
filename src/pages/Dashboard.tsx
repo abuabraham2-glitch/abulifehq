@@ -98,13 +98,6 @@ export default function Dashboard() {
             >
               + Brain dump
             </button>
-            <button
-              onClick={() => setLifeCtxOpen(true)}
-              className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-[20px] text-[13px] md:text-xs font-medium border min-h-[44px] md:min-h-0"
-              style={{ color: 'hsl(var(--muted-foreground))', borderColor: 'hsl(var(--border))', backgroundColor: 'transparent' }}
-            >
-              Life context
-            </button>
           </div>
 
           {/* Mobile-only quote */}
