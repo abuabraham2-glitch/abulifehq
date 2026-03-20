@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Inbox, ChevronRight, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
-import { LifeContextModal } from '@/components/LifeContextModal';
+import { PlanChatSection } from '@/components/PlanChatSection';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
 import { SkipReasonModal } from '@/components/SkipReasonModal';
@@ -16,7 +16,7 @@ import { useAppContext } from '@/contexts/AppContext';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
-  const [lifeCtxOpen, setLifeCtxOpen] = useState(false);
+  
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const { planDismissed, dismissPlan } = useAppContext();
@@ -98,13 +98,6 @@ export default function Dashboard() {
             >
               + Brain dump
             </button>
-            <button
-              onClick={() => setLifeCtxOpen(true)}
-              className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-[20px] text-[13px] md:text-xs font-medium border min-h-[44px] md:min-h-0"
-              style={{ color: 'hsl(var(--muted-foreground))', borderColor: 'hsl(var(--border))', backgroundColor: 'transparent' }}
-            >
-              Life context
-            </button>
           </div>
 
           {/* Mobile-only quote */}
@@ -172,6 +165,9 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* Chat input for plan revisions */}
+          <PlanChatSection planId={plan?.id ?? null} />
 
           {/* Current Focus */}
           {currentItem && (
@@ -288,7 +284,7 @@ export default function Dashboard() {
       )}
 
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
-      <LifeContextModal open={lifeCtxOpen} onOpenChange={setLifeCtxOpen} />
+      
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
       <SkipReasonModal
         open={!!skipItem}
