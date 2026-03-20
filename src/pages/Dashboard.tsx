@@ -6,6 +6,7 @@ import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { LifeContextModal } from '@/components/LifeContextModal';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
+import { SkipReasonModal } from '@/components/SkipReasonModal';
 import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [lifeCtxOpen, setLifeCtxOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
+  const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const { planDismissed, dismissPlan } = useAppContext();
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
@@ -64,8 +66,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleSkip = async (item: PlanItem) => {
-    await updatePlanItem.mutateAsync({ id: item.id, status: 'skipped' });
+  const handleSkip = async (item: PlanItem, reason?: string) => {
+    await updatePlanItem.mutateAsync({
+      id: item.id,
+      status: 'skipped',
+      skip_reason: reason,
+      task_id: item.task_id,
+    });
+    setSkipItem(null);
   };
 
   const loading = loadingPlan || loadingItems;
@@ -189,7 +197,7 @@ export default function Dashboard() {
 
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => handleSkip(currentItem)}
+                    onClick={() => setSkipItem(currentItem)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
@@ -282,6 +290,13 @@ export default function Dashboard() {
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
       <LifeContextModal open={lifeCtxOpen} onOpenChange={setLifeCtxOpen} />
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
+      <SkipReasonModal
+        open={!!skipItem}
+        onOpenChange={(o) => !o && setSkipItem(null)}
+        taskTitle={skipItem?.title || ''}
+        onSkipWithReason={(reason) => skipItem && handleSkip(skipItem, reason)}
+        onSkipWithoutReason={() => skipItem && handleSkip(skipItem)}
+      />
     </div>
   );
 }
