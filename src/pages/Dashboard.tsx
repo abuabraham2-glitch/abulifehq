@@ -290,6 +290,13 @@ export default function Dashboard() {
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
       <LifeContextModal open={lifeCtxOpen} onOpenChange={setLifeCtxOpen} />
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
+      <SkipReasonModal
+        open={!!skipItem}
+        onOpenChange={(o) => !o && setSkipItem(null)}
+        taskTitle={skipItem?.title || ''}
+        onSkipWithReason={(reason) => skipItem && handleSkip(skipItem, reason)}
+        onSkipWithoutReason={() => skipItem && handleSkip(skipItem)}
+      />
     </div>
   );
 }
