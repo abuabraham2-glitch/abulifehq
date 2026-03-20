@@ -197,7 +197,7 @@ export default function Dashboard() {
 
                 <div className="flex justify-center gap-3">
                   <button
-                    onClick={() => handleSkip(currentItem)}
+                    onClick={() => setSkipItem(currentItem)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
