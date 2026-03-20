@@ -130,6 +130,7 @@ export type Database = {
           id: string
           is_calendar_event: boolean | null
           plan_id: string | null
+          skip_reason: string | null
           sort_order: number | null
           start_time: string
           status: string | null
@@ -147,6 +148,7 @@ export type Database = {
           id?: string
           is_calendar_event?: boolean | null
           plan_id?: string | null
+          skip_reason?: string | null
           sort_order?: number | null
           start_time: string
           status?: string | null
@@ -164,6 +166,7 @@ export type Database = {
           id?: string
           is_calendar_event?: boolean | null
           plan_id?: string | null
+          skip_reason?: string | null
           sort_order?: number | null
           start_time?: string
           status?: string | null
@@ -249,6 +252,7 @@ export type Database = {
           notes: string | null
           notion_id: string | null
           quadrant: string | null
+          skip_reason: string | null
           source: string | null
           status: string | null
           updated_at: string | null
@@ -270,6 +274,7 @@ export type Database = {
           notes?: string | null
           notion_id?: string | null
           quadrant?: string | null
+          skip_reason?: string | null
           source?: string | null
           status?: string | null
           updated_at?: string | null
@@ -291,6 +296,7 @@ export type Database = {
           notes?: string | null
           notion_id?: string | null
           quadrant?: string | null
+          skip_reason?: string | null
           source?: string | null
           status?: string | null
           updated_at?: string | null
