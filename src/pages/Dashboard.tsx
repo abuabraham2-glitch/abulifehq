@@ -6,6 +6,7 @@ import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { LifeContextModal } from '@/components/LifeContextModal';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
+import { SkipReasonModal } from '@/components/SkipReasonModal';
 import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
