@@ -253,7 +253,7 @@ export default function Dashboard() {
                     }}
                   >
                     <button
-                      onClick={() => handleDone(item)}
+                      onClick={() => openDoneDialog(item)}
                       className="w-[22px] h-[22px] rounded-[6px] border-2 flex-shrink-0 flex items-center justify-center min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0"
                       style={{ borderColor: 'hsl(var(--border))' }}
                     />
