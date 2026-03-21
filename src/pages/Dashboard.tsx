@@ -1,7 +1,10 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Inbox, ChevronRight, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { PlanChatSection } from '@/components/PlanChatSection';
 import { TaskEditModal } from '@/components/TaskEditModal';
@@ -20,6 +23,8 @@ export default function Dashboard() {
   
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
+  const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
+  const [actualMinutes, setActualMinutes] = useState(0);
   const { planDismissed, dismissPlan } = useAppContext();
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
@@ -27,11 +32,6 @@ export default function Dashboard() {
   const { data: triageCount = 0 } = useTriageCount();
   const completeTask = useCompleteTask();
   const updatePlanItem = useUpdatePlanItem();
-  const elapsedRef = useRef(0);
-
-  const handleElapsedChange = useCallback((minutes: number) => {
-    elapsedRef.current = minutes;
-  }, []);
 
   const [phrase] = useState(getRandomPhrase);
 
@@ -72,15 +72,22 @@ export default function Dashboard() {
   const totalH = Math.floor(totalPlannedMinutes / 60);
   const totalM = totalPlannedMinutes % 60;
 
-  const handleDone = async (item: PlanItem) => {
+  const openDoneDialog = (item: PlanItem) => {
+    setActualMinutes(item.est_minutes || 25);
+    setDoneItem(item);
+  };
+
+  const handleSaveDone = async () => {
+    if (!doneItem) return;
     await updatePlanItem.mutateAsync({
-      id: item.id,
+      id: doneItem.id,
       status: 'completed',
-      actual_minutes: elapsedRef.current || undefined,
+      actual_minutes: actualMinutes,
     });
-    if (item.task_id) {
-      await completeTask.mutateAsync(item.task_id);
+    if (doneItem.task_id) {
+      await completeTask.mutateAsync(doneItem.task_id);
     }
+    setDoneItem(null);
   };
 
   const handleSkip = async (item: PlanItem, reason?: string) => {
@@ -206,11 +213,7 @@ export default function Dashboard() {
                 )}
                 {!currentItem.overdue && <div className="mb-5" />}
 
-                <FocusTimer
-                  estMinutes={currentItem.item.est_minutes || 25}
-                  category={currentItem.item.category}
-                  onElapsedChange={handleElapsedChange}
-                />
+                <FocusTimer />
 
                 <div className="flex justify-center gap-3">
                   <button
@@ -221,11 +224,11 @@ export default function Dashboard() {
                     Skip
                   </button>
                   <button
-                    onClick={() => handleDone(currentItem.item)}
+                    onClick={() => openDoneDialog(currentItem.item)}
                     className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
                   >
-                    Done
+                    ✓ Done
                   </button>
                 </div>
               </div>
@@ -317,6 +320,36 @@ export default function Dashboard() {
         onSkipWithReason={(reason) => skipItem && handleSkip(skipItem, reason)}
         onSkipWithoutReason={() => skipItem && handleSkip(skipItem)}
       />
+      <Dialog open={!!doneItem} onOpenChange={(o) => !o && setDoneItem(null)}>
+        <DialogContent className="max-w-[340px] rounded-[18px]">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">How long did this actually take?</DialogTitle>
+          </DialogHeader>
+          <div className="py-3">
+            <p className="text-[13px] text-muted-foreground mb-2">{doneItem?.title}</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                value={actualMinutes}
+                onChange={(e) => setActualMinutes(Number(e.target.value))}
+                className="w-24 text-center"
+              />
+              <span className="text-[13px] text-muted-foreground">minutes</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleSaveDone}
+              disabled={updatePlanItem.isPending}
+              className="w-full rounded-xl"
+              style={{ backgroundColor: '#059669' }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
