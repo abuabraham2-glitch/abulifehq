@@ -1,0 +1,165 @@
+import { useState } from 'react';
+import { Check, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
+import { useCompleteTask } from '@/hooks/useTasks';
+import { formatTime12h, getCategoryColor } from '@/lib/constants';
+
+export function FullSchedule() {
+  const { data: planItems, isLoading } = useTodayPlanItems();
+  const updatePlanItem = useUpdatePlanItem();
+  const completeTask = useCompleteTask();
+
+  const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
+  const [actualMinutes, setActualMinutes] = useState(0);
+
+  if (isLoading || !planItems?.length) return null;
+
+  const openDoneDialog = (item: PlanItem) => {
+    setActualMinutes(item.est_minutes || 25);
+    setDoneItem(item);
+  };
+
+  const handleSaveDone = async () => {
+    if (!doneItem) return;
+    await updatePlanItem.mutateAsync({
+      id: doneItem.id,
+      status: 'completed',
+      actual_minutes: actualMinutes,
+    });
+    if (doneItem.task_id) {
+      await completeTask.mutateAsync(doneItem.task_id);
+    }
+    setDoneItem(null);
+  };
+
+  const handleSkip = async (item: PlanItem) => {
+    await updatePlanItem.mutateAsync({
+      id: item.id,
+      status: 'skipped',
+    });
+  };
+
+  return (
+    <div>
+      <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider mb-3">
+        TODAY'S FULL SCHEDULE
+      </p>
+      <div className="space-y-2">
+        {planItems.map((item) => {
+          const isCompleted = item.status === 'completed';
+          const isSkipped = item.status === 'skipped';
+          const isDone = isCompleted || isSkipped;
+
+          return (
+            <div
+              key={item.id}
+              className="flex items-center gap-3 rounded-[14px] p-3.5 min-h-[52px]"
+              style={{
+                backgroundColor: isDone ? 'hsl(var(--secondary))' : 'hsl(var(--card))',
+                border: '0.5px solid rgba(0,0,0,0.04)',
+                opacity: isSkipped ? 0.55 : 1,
+              }}
+            >
+              {/* Status icon */}
+              <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+                {isCompleted && (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: '#059669' }}>
+                    <Check size={12} className="text-white" />
+                  </div>
+                )}
+                {isSkipped && (
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--muted-foreground))' }}>
+                    <X size={12} className="text-white" />
+                  </div>
+                )}
+                {!isDone && (
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: getCategoryColor(item.category) }}
+                  />
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <p
+                  className={`text-[14px] md:text-[13px] ${isDone ? 'line-through' : ''}`}
+                  style={{ color: isSkipped ? 'hsl(var(--muted-foreground))' : 'hsl(var(--foreground))' }}
+                >
+                  {item.title}
+                </p>
+                <p className="text-[12px] text-muted-foreground">
+                  {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
+                  {isCompleted && item.actual_minutes != null && ` · ${item.actual_minutes}m actual`}
+                </p>
+              </div>
+
+              {/* Est minutes badge */}
+              <span
+                className="text-[12px] font-medium flex-shrink-0"
+                style={{ color: getCategoryColor(item.category) }}
+              >
+                {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
+              </span>
+
+              {/* Action buttons */}
+              {!isDone && (
+                <div className="flex gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => openDoneDialog(item)}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0"
+                    style={{ backgroundColor: '#059669', color: '#fff' }}
+                  >
+                    ✓ Done
+                  </button>
+                  <button
+                    onClick={() => handleSkip(item)}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0"
+                    style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
+                  >
+                    Skip
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Done dialog */}
+      <Dialog open={!!doneItem} onOpenChange={(o) => !o && setDoneItem(null)}>
+        <DialogContent className="max-w-[340px] rounded-[18px]">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">How long did this actually take?</DialogTitle>
+          </DialogHeader>
+          <div className="py-3">
+            <p className="text-[13px] text-muted-foreground mb-2">{doneItem?.title}</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={0}
+                value={actualMinutes}
+                onChange={(e) => setActualMinutes(Number(e.target.value))}
+                className="w-24 text-center"
+              />
+              <span className="text-[13px] text-muted-foreground">minutes</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handleSaveDone}
+              disabled={updatePlanItem.isPending}
+              className="w-full rounded-xl"
+              style={{ backgroundColor: '#059669' }}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@ import { PlanChatSection } from '@/components/PlanChatSection';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
 import { SkipReasonModal } from '@/components/SkipReasonModal';
+import { FullSchedule } from '@/components/FullSchedule';
 import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
@@ -267,6 +268,9 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* Full Schedule */}
+          <FullSchedule />
 
           {/* Today's Wins */}
           <div className="rounded-[14px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(0,0,0,0.04)' }}>
