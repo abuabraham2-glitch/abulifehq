@@ -14,11 +14,15 @@ export default function Triage() {
 
   const handleApprove = async (item: UnifiedTriageItem) => {
     if (item.task_id) {
+      const task = item.tasks;
       await updateTask.mutateAsync({
         id: item.task_id,
-        category: item.suggested_category,
-        quadrant: item.suggested_quadrant,
-        est_minutes: item.suggested_est_minutes,
+        category: item.suggested_category ?? task?.category ?? null,
+        importance: task?.importance ?? null,
+        urgency: task?.urgency ?? null,
+        quadrant: item.suggested_quadrant ?? task?.quadrant ?? null,
+        est_minutes: item.suggested_est_minutes ?? task?.est_minutes ?? null,
+        notes: task?.notes ?? null,
         needs_triage: false,
       });
     }
