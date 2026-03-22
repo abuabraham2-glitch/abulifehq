@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, Edit, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePendingTriage, useResolveTriage } from '@/hooks/useTriageQueue';
+import { usePendingTriage, useResolveTriage, type UnifiedTriageItem } from '@/hooks/useTriageQueue';
 import { useUpdateTask, type Task } from '@/hooks/useTasks';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { getCategoryColor, getQuadrantColor } from '@/lib/constants';
@@ -12,7 +12,7 @@ export default function Triage() {
   const updateTask = useUpdateTask();
   const [editTask, setEditTask] = useState<Task | null>(null);
 
-  const handleApprove = async (item: any) => {
+  const handleApprove = async (item: UnifiedTriageItem) => {
     if (item.task_id) {
       await updateTask.mutateAsync({
         id: item.task_id,
@@ -25,9 +25,9 @@ export default function Triage() {
     await resolveTriage.mutateAsync({ id: item.id, status: 'approved' });
   };
 
-  const handleDismiss = async (item: any) => {
+  const handleDismiss = async (item: UnifiedTriageItem) => {
     if (item.task_id) {
-      await updateTask.mutateAsync({ id: item.task_id, status: 'archived' });
+      await updateTask.mutateAsync({ id: item.task_id, status: 'archived', needs_triage: false });
     }
     await resolveTriage.mutateAsync({ id: item.id, status: 'dismissed' });
   };
@@ -50,15 +50,23 @@ export default function Triage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((item: any) => {
+          {items.map((item) => {
             const task = item.tasks;
+            const isOrphan = item.source === 'orphan_task';
             return (
               <div
                 key={item.id}
                 className="rounded-[14px] bg-card p-4 md:p-5"
                 style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
               >
-                <h3 className="text-[16px] md:text-lg font-medium text-foreground mb-2">{task?.name || 'Unknown task'}</h3>
+                <div className="flex items-center gap-2 mb-2">
+                  <h3 className="text-[16px] md:text-lg font-medium text-foreground">{task?.name || 'Unknown task'}</h3>
+                  {isOrphan && (
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                      Needs review
+                    </span>
+                  )}
+                </div>
 
                 <div className="flex items-center gap-2 mb-2">
                   {item.suggested_category && (
@@ -92,7 +100,6 @@ export default function Triage() {
                   <p className="text-[13px] text-muted-foreground mb-4 leading-relaxed">{item.ai_reasoning}</p>
                 )}
 
-                {/* Mobile: stacked buttons. Desktop: row */}
                 <div className="flex flex-col md:flex-row gap-2">
                   <button
                     onClick={() => handleApprove(item)}
