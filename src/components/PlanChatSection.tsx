@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import type { PlanItem } from '@/hooks/useDailyPlan';
 
 interface ChatMessage {
   role: 'user' | 'ai';
@@ -10,9 +11,10 @@ interface ChatMessage {
 
 interface Props {
   planId: string | null;
+  planItems?: PlanItem[];
 }
 
-export function PlanChatSection({ planId }: Props) {
+export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,7 +37,22 @@ export function PlanChatSection({ planId }: Props) {
       const res = await fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-revision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, planId }),
+        body: JSON.stringify({
+          message: text,
+          planId,
+          currentItems: (currentPlanItems ?? []).map((item) => ({
+            id: item.id,
+            title: item.title,
+            start_time: item.start_time,
+            end_time: item.end_time,
+            category: item.category,
+            status: item.status,
+            est_minutes: item.est_minutes,
+            actual_minutes: item.actual_minutes,
+            is_calendar_event: item.is_calendar_event,
+            task_id: item.task_id,
+          })),
+        }),
       });
       const rawText = await res.text();
       console.log('Raw webhook response:', rawText);
@@ -58,9 +75,15 @@ export function PlanChatSection({ planId }: Props) {
       const msg = data.message || 'Done.';
 
       if (data.action === 'revision') {
-        setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
-        toast({ title: msg });
-        queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+        // Safeguard: validate the response before accepting
+        if (!data || (typeof data !== 'object') || msg === '') {
+          setMessages((prev) => [...prev, { role: 'ai', text: 'Something went wrong, your plan was not changed.' }]);
+          toast({ title: 'Something went wrong, your plan was not changed.', variant: 'destructive' });
+        } else {
+          setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
+          toast({ title: msg });
+          queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+        }
       } else if (data.action === 'answer') {
         setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
       } else {
