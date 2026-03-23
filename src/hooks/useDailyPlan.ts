@@ -5,12 +5,44 @@ import type { Tables } from '@/integrations/supabase/types';
 export type DailyPlan = Tables<'daily_plans'>;
 export type PlanItem = Tables<'plan_items'>;
 
-function todayStr() {
+export function todayStr() {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  return dateStr(d);
+}
+
+export function yesterdayStr() {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  d.setDate(d.getDate() - 1);
+  return dateStr(d);
+}
+
+function dateStr(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+export function usePlanItemsByDate(dateString: string) {
+  return useQuery({
+    queryKey: ['daily-plan', 'items-by-date', dateString],
+    queryFn: async () => {
+      const { data: plan, error: pe } = await supabase
+        .from('daily_plans')
+        .select('*')
+        .eq('plan_date', dateString)
+        .maybeSingle();
+      if (pe) throw pe;
+      if (!plan) return [];
+      const { data, error } = await supabase
+        .from('plan_items')
+        .select('*')
+        .eq('plan_id', plan.id)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as PlanItem[];
+    },
+  });
 }
 
 export function useTodayPlan() {
