@@ -190,6 +190,33 @@ export type Database = {
           },
         ]
       }
+      preferences: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          preference_text: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          preference_text: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          preference_text?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       recurring_tasks: {
         Row: {
           active: boolean | null
