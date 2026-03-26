@@ -57,6 +57,13 @@ export function FullSchedule() {
 
   const handleSkip = async (item: PlanItem) => {
     await updatePlanItem.mutateAsync({ id: item.id, status: 'skipped' });
+    if (item.calendar_event_id) {
+      fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+      }).catch(() => {});
+    }
   };
 
   const handleUndo = async (item: PlanItem) => {
