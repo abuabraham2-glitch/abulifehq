@@ -34,10 +34,10 @@ export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) 
     setLoading(true);
 
     try {
+      const targetDate = /tomorrow/i.test(text) ? 'tomorrow' : 'today';
       const res = await fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-revision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        const targetDate = /tomorrow/i.test(text) ? 'tomorrow' : 'today';
         body: JSON.stringify({
           message: text,
           target_date: targetDate,
