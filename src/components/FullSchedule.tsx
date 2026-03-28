@@ -28,6 +28,13 @@ export function FullSchedule() {
     return `${h}:${m}:00`;
   }, []);
 
+  const pastPendingItems = useMemo(() => {
+    if (viewYesterday) return [];
+    return (planItems ?? []).filter(
+      (i) => i.status !== 'completed' && i.status !== 'skipped' && i.end_time < nowTime
+    );
+  }, [planItems, nowTime, viewYesterday]);
+
   if (isLoading) return null;
   if (!planItems?.length) {
     if (viewYesterday) {
