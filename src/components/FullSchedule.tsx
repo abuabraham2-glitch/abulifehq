@@ -17,6 +17,9 @@ export function FullSchedule() {
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
+  const [bulkSkipOpen, setBulkSkipOpen] = useState(false);
+  const [bulkSkipReason, setBulkSkipReason] = useState('');
+  const [bulkSkipping, setBulkSkipping] = useState(false);
 
   const nowTime = useMemo(() => {
     const pac = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
