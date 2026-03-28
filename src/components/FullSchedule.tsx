@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Check, X, RotateCcw, Clock, Pencil } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { usePlanItemsByDate, useUpdatePlanItem, todayStr, yesterdayStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
@@ -16,6 +17,9 @@ export function FullSchedule() {
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
+  const [bulkSkipOpen, setBulkSkipOpen] = useState(false);
+  const [bulkSkipReason, setBulkSkipReason] = useState('');
+  const [bulkSkipping, setBulkSkipping] = useState(false);
 
   const nowTime = useMemo(() => {
     const pac = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
@@ -23,6 +27,13 @@ export function FullSchedule() {
     const m = String(pac.getMinutes()).padStart(2, '0');
     return `${h}:${m}:00`;
   }, []);
+
+  const pastPendingItems = useMemo(() => {
+    if (viewYesterday) return [];
+    return (planItems ?? []).filter(
+      (i) => i.status !== 'completed' && i.status !== 'skipped' && i.end_time < nowTime
+    );
+  }, [planItems, nowTime, viewYesterday]);
 
   if (isLoading) return null;
   if (!planItems?.length) {
@@ -70,11 +81,44 @@ export function FullSchedule() {
     await updatePlanItem.mutateAsync({ id: item.id, status: 'pending' });
   };
 
+
+  const handleBulkSkip = async () => {
+    setBulkSkipping(true);
+    const reason = bulkSkipReason.trim() || null;
+    try {
+      await Promise.all(
+        pastPendingItems.map(async (item) => {
+          await updatePlanItem.mutateAsync({
+            id: item.id,
+            status: 'skipped',
+            skip_reason: reason,
+          });
+          if (item.calendar_event_id) {
+            fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+            }).catch(() => {});
+          }
+        })
+      );
+    } finally {
+      setBulkSkipping(false);
+      setBulkSkipOpen(false);
+      setBulkSkipReason('');
+    }
+  };
+
   const isOverdue = (item: PlanItem) => !viewYesterday && item.end_time < nowTime;
 
   return (
     <div>
-      <Header viewYesterday={viewYesterday} onToggle={() => setViewYesterday(!viewYesterday)} />
+      <Header
+        viewYesterday={viewYesterday}
+        onToggle={() => setViewYesterday(!viewYesterday)}
+        showBulkSkip={pastPendingItems.length > 0}
+        onBulkSkip={() => setBulkSkipOpen(true)}
+      />
       <div className="space-y-2">
         {planItems.map((item) => {
           const isCompleted = item.status === 'completed';
@@ -206,24 +250,72 @@ export function FullSchedule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Skip Modal */}
+      <Dialog open={bulkSkipOpen} onOpenChange={(o) => { if (!o) { setBulkSkipOpen(false); setBulkSkipReason(''); } }}>
+        <DialogContent className="max-w-[380px] rounded-[18px]">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">Skip past events?</DialogTitle>
+            <DialogDescription className="text-[13px] text-muted-foreground">
+              {pastPendingItems.length} overdue item{pastPendingItems.length !== 1 ? 's' : ''} will be marked as skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="text-[13px] text-muted-foreground mb-1.5 block">Reason (optional)</label>
+            <Textarea
+              value={bulkSkipReason}
+              onChange={(e) => setBulkSkipReason(e.target.value)}
+              placeholder="e.g. ran out of time, priorities changed..."
+              className="min-h-[70px] text-[14px] rounded-xl resize-none"
+            />
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setBulkSkipOpen(false); setBulkSkipReason(''); }}
+              className="flex-1 rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkSkip}
+              disabled={bulkSkipping}
+              className="flex-1 rounded-xl"
+              style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+            >
+              {bulkSkipping ? 'Skipping...' : 'Skip'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function Header({ viewYesterday, onToggle }: { viewYesterday: boolean; onToggle: () => void }) {
+function Header({ viewYesterday, onToggle, showBulkSkip, onBulkSkip }: { viewYesterday: boolean; onToggle: () => void; showBulkSkip?: boolean; onBulkSkip?: () => void }) {
   return (
     <div className="flex items-center justify-between mb-3">
       <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider">
         {viewYesterday ? "YESTERDAY'S SCHEDULE" : "TODAY'S FULL SCHEDULE"}
       </p>
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-1 text-[12px] font-medium"
-        style={{ color: '#B8906C' }}
-      >
-        <Clock size={12} />
-        {viewYesterday ? 'View Today' : 'View Yesterday'}
-      </button>
+      <div className="flex items-center gap-3">
+        {showBulkSkip && (
+          <button
+            onClick={onBulkSkip}
+            className="text-[12px] font-medium text-destructive"
+          >
+            Skip past events
+          </button>
+        )}
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-1 text-[12px] font-medium"
+          style={{ color: '#B8906C' }}
+        >
+          <Clock size={12} />
+          {viewYesterday ? 'View Today' : 'View Yesterday'}
+        </button>
+      </div>
     </div>
   );
 }
