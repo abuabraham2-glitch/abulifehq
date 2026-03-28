@@ -74,6 +74,40 @@ export function FullSchedule() {
     await updatePlanItem.mutateAsync({ id: item.id, status: 'pending' });
   };
 
+  const pastPendingItems = useMemo(() => {
+    if (viewYesterday) return [];
+    return (planItems ?? []).filter(
+      (i) => i.status !== 'completed' && i.status !== 'skipped' && i.end_time < nowTime
+    );
+  }, [planItems, nowTime, viewYesterday]);
+
+  const handleBulkSkip = async () => {
+    setBulkSkipping(true);
+    const reason = bulkSkipReason.trim() || null;
+    try {
+      await Promise.all(
+        pastPendingItems.map(async (item) => {
+          await updatePlanItem.mutateAsync({
+            id: item.id,
+            status: 'skipped',
+            skip_reason: reason,
+          });
+          if (item.calendar_event_id) {
+            fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+            }).catch(() => {});
+          }
+        })
+      );
+    } finally {
+      setBulkSkipping(false);
+      setBulkSkipOpen(false);
+      setBulkSkipReason('');
+    }
+  };
+
   const isOverdue = (item: PlanItem) => !viewYesterday && item.end_time < nowTime;
 
   return (
