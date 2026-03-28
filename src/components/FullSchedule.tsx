@@ -307,14 +307,32 @@ function Header({ viewYesterday, onToggle, showBulkSkip, onBulkSkip }: { viewYes
             Skip past events
           </button>
         )}
-        <button
-          onClick={onToggle}
-          className="flex items-center gap-1 text-[12px] font-medium"
-          style={{ color: '#B8906C' }}
-        >
-          <Clock size={12} />
-          {viewYesterday ? 'View Today' : 'View Yesterday'}
-        </button>
+        <div className="flex gap-1.5">
+          <button
+            onClick={viewYesterday ? onToggle : undefined}
+            className="flex items-center gap-1.5 text-[14px] font-bold rounded-full px-4 py-2 transition-colors"
+            style={{
+              backgroundColor: !viewYesterday ? '#B8906C' : '#E8E0D4',
+              color: !viewYesterday ? '#fff' : '#3D3225',
+              border: '1.5px solid #B8906C',
+            }}
+          >
+            <Clock size={13} />
+            Today
+          </button>
+          <button
+            onClick={!viewYesterday ? onToggle : undefined}
+            className="flex items-center gap-1.5 text-[14px] font-bold rounded-full px-4 py-2 transition-colors"
+            style={{
+              backgroundColor: viewYesterday ? '#B8906C' : '#E8E0D4',
+              color: viewYesterday ? '#fff' : '#3D3225',
+              border: '1.5px solid #B8906C',
+            }}
+          >
+            <Clock size={13} />
+            Yesterday
+          </button>
+        </div>
       </div>
     </div>
   );
