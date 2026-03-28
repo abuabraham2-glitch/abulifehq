@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Check, X, RotateCcw, Clock, Pencil } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { usePlanItemsByDate, useUpdatePlanItem, todayStr, yesterdayStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
