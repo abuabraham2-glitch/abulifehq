@@ -250,24 +250,72 @@ export function FullSchedule() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Skip Modal */}
+      <Dialog open={bulkSkipOpen} onOpenChange={(o) => { if (!o) { setBulkSkipOpen(false); setBulkSkipReason(''); } }}>
+        <DialogContent className="max-w-[380px] rounded-[18px]">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">Skip past events?</DialogTitle>
+            <DialogDescription className="text-[13px] text-muted-foreground">
+              {pastPendingItems.length} overdue item{pastPendingItems.length !== 1 ? 's' : ''} will be marked as skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="text-[13px] text-muted-foreground mb-1.5 block">Reason (optional)</label>
+            <Textarea
+              value={bulkSkipReason}
+              onChange={(e) => setBulkSkipReason(e.target.value)}
+              placeholder="e.g. ran out of time, priorities changed..."
+              className="min-h-[70px] text-[14px] rounded-xl resize-none"
+            />
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => { setBulkSkipOpen(false); setBulkSkipReason(''); }}
+              className="flex-1 rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleBulkSkip}
+              disabled={bulkSkipping}
+              className="flex-1 rounded-xl"
+              style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
+            >
+              {bulkSkipping ? 'Skipping...' : 'Skip'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function Header({ viewYesterday, onToggle }: { viewYesterday: boolean; onToggle: () => void }) {
+function Header({ viewYesterday, onToggle, showBulkSkip, onBulkSkip }: { viewYesterday: boolean; onToggle: () => void; showBulkSkip?: boolean; onBulkSkip?: () => void }) {
   return (
     <div className="flex items-center justify-between mb-3">
       <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider">
         {viewYesterday ? "YESTERDAY'S SCHEDULE" : "TODAY'S FULL SCHEDULE"}
       </p>
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-1 text-[12px] font-medium"
-        style={{ color: '#B8906C' }}
-      >
-        <Clock size={12} />
-        {viewYesterday ? 'View Today' : 'View Yesterday'}
-      </button>
+      <div className="flex items-center gap-3">
+        {showBulkSkip && (
+          <button
+            onClick={onBulkSkip}
+            className="text-[12px] font-medium text-destructive"
+          >
+            Skip past events
+          </button>
+        )}
+        <button
+          onClick={onToggle}
+          className="flex items-center gap-1 text-[12px] font-medium"
+          style={{ color: '#B8906C' }}
+        >
+          <Clock size={12} />
+          {viewYesterday ? 'View Today' : 'View Yesterday'}
+        </button>
+      </div>
     </div>
   );
 }
