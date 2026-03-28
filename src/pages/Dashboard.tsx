@@ -97,6 +97,13 @@ export default function Dashboard() {
       skip_reason: reason,
       task_id: item.task_id,
     });
+    if (item.calendar_event_id) {
+      fetch('https://bottlesandprint.app.n8n.cloud/webhook/skip-event-cleanup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calendar_event_id: item.calendar_event_id, plan_item_id: item.id }),
+      }).catch(() => {});
+    }
     setSkipItem(null);
   };
 
