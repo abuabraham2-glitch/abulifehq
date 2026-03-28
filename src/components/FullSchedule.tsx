@@ -113,7 +113,12 @@ export function FullSchedule() {
 
   return (
     <div>
-      <Header viewYesterday={viewYesterday} onToggle={() => setViewYesterday(!viewYesterday)} />
+      <Header
+        viewYesterday={viewYesterday}
+        onToggle={() => setViewYesterday(!viewYesterday)}
+        showBulkSkip={pastPendingItems.length > 0}
+        onBulkSkip={() => setBulkSkipOpen(true)}
+      />
       <div className="space-y-2">
         {planItems.map((item) => {
           const isCompleted = item.status === 'completed';
