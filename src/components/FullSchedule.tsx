@@ -81,12 +81,6 @@ export function FullSchedule() {
     await updatePlanItem.mutateAsync({ id: item.id, status: 'pending' });
   };
 
-  const pastPendingItems = useMemo(() => {
-    if (viewYesterday) return [];
-    return (planItems ?? []).filter(
-      (i) => i.status !== 'completed' && i.status !== 'skipped' && i.end_time < nowTime
-    );
-  }, [planItems, nowTime, viewYesterday]);
 
   const handleBulkSkip = async () => {
     setBulkSkipping(true);
