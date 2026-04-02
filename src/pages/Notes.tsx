@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Pencil, Trash2, Loader2, Plus } from 'lucide-react';
 import { AddNoteModal } from '@/components/AddNoteModal';
