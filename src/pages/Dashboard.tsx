@@ -218,7 +218,7 @@ export default function Dashboard() {
           {currentItem && (
             <div>
               <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider mb-3">CURRENT FOCUS</p>
-              <div className="rounded-[18px] bg-card p-4 md:p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
+              <div className="rounded-[18px] bg-card p-4 md:p-6 text-center" style={{ border: '1.5px solid #5C3D1E' }}>
                 <div className="flex items-center justify-center gap-1.5 mb-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCategoryColor(currentItem.item.category) }} />
                   <span className="text-[11px] font-medium" style={{ color: getCategoryColor(currentItem.item.category) }}>
