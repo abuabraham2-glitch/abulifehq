@@ -29,6 +29,7 @@ type Note = {
   content: string;
   note_type: string | null;
   ai_summary: string | null;
+  image_url: string | null;
   reminder_date: string | null;
   tags: string[] | null;
   created_at: string | null;
@@ -169,6 +170,13 @@ export default function Notes() {
               className="rounded-[14px] bg-card p-4"
               style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
             >
+              {note.image_url && (
+                <img
+                  src={note.image_url}
+                  alt="Note attachment"
+                  className="w-full max-h-[180px] object-cover rounded-xl mb-2"
+                />
+              )}
               <div className="flex items-start justify-between gap-2">
                 <p className="text-[14px] text-foreground leading-relaxed flex-1 whitespace-pre-wrap">{note.content}</p>
                 <div className="flex gap-1 flex-shrink-0">
