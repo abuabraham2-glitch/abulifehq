@@ -89,6 +89,20 @@ export default function Notes() {
     }
   }, []);
 
+  const { data: notes = [], isLoading } = useQuery({
+    queryKey: ['notes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as Note[];
+    },
+  });
+
+  const filtered = filter === 'All' ? notes : notes.filter((n) => n.note_type === filter);
+
   const findNoteByReference = useCallback((ref: string): Note | undefined => {
     const lower = ref.toLowerCase().trim();
     return notes.find(n => n.title?.toLowerCase() === lower)
@@ -108,7 +122,6 @@ export default function Notes() {
           </a>
         );
       }
-      // Look for quoted references like "Title Here" or 「Title」
       const quoteRegex = /[""«]([^""»]+)[""»]/g;
       const subParts: React.ReactNode[] = [];
       let lastIdx = 0;
@@ -140,20 +153,6 @@ export default function Notes() {
       return <span key={i}>{part}</span>;
     });
   }, [findNoteByReference, scrollToNote]);
-
-  const { data: notes = [], isLoading } = useQuery({
-    queryKey: ['notes'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notes')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data as Note[];
-    },
-  });
-
-  const filtered = filter === 'All' ? notes : notes.filter((n) => n.note_type === filter);
 
   const updateNote = useMutation({
     mutationFn: async ({ id, content, title, note_type }: { id: string; content: string; title: string; note_type: string }) => {
