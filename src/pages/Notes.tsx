@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, Pencil, Trash2, Loader2, X } from 'lucide-react';
+import { Send, Pencil, Trash2, Loader2, X, Plus } from 'lucide-react';
+import { AddNoteModal } from '@/components/AddNoteModal';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -74,6 +75,7 @@ export default function Notes() {
   const [editType, setEditType] = useState('General');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedNote, setExpandedNote] = useState<Note | null>(null);
+  const [addNoteOpen, setAddNoteOpen] = useState(false);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes'],
@@ -331,6 +333,17 @@ export default function Notes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* FAB */}
+      <button
+        onClick={() => setAddNoteOpen(true)}
+        className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+        style={{ backgroundColor: '#B8906C' }}
+      >
+        <Plus size={26} className="text-white" />
+      </button>
+
+      <AddNoteModal open={addNoteOpen} onOpenChange={setAddNoteOpen} />
     </div>
   );
 }
