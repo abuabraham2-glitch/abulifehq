@@ -104,51 +104,74 @@ export default function Notes() {
   const filtered = filter === 'All' ? notes : notes.filter((n) => n.note_type === filter);
 
 
-  const renderAiAnswer = useCallback((text: string) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-    return parts.map((part, i) => {
-      if (urlRegex.test(part)) {
-        return (
-          <a key={i} href={part} target="_blank" rel="noopener noreferrer"
-            className="underline break-all" style={{ color: '#B8906C' }}>
-            {part}
-          </a>
-        );
-      }
-      // Find exact note title matches in the text
-      const noteTitles = notes.filter(n => n.title).map(n => n.title as string);
-      if (noteTitles.length === 0) return <span key={i}>{part}</span>;
+  const parseMarkdownToHtml = useCallback((text: string): string => {
+    let html = text
+      // Bold: **text** or __text__
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<strong>$1</strong>')
+      // Italic: *text* or _text_ (but not inside URLs or already-bold)
+      .replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+      // Headings: ### text
+      .replace(/^### (.+)$/gm, '<strong class="text-[14px]">$1</strong>')
+      .replace(/^## (.+)$/gm, '<strong class="text-[15px]">$1</strong>')
+      .replace(/^# (.+)$/gm, '<strong class="text-[16px]">$1</strong>');
 
-      // Build regex to match any note title
+    // Bullet lists: lines starting with - or *
+    html = html.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul class="list-disc pl-4 my-1 space-y-0.5">$1</ul>');
+
+    // Numbered lists: lines starting with 1. 2. etc
+    html = html.replace(/^\d+\.\s+(.+)$/gm, '<li>$1</li>');
+
+    // Convert newlines to <br> (but not inside lists)
+    html = html.replace(/\n(?!<)/g, '<br/>');
+
+    return html;
+  }, []);
+
+  const renderAiAnswer = useCallback((text: string) => {
+    // First convert markdown to HTML
+    let html = parseMarkdownToHtml(text);
+
+    // Linkify URLs
+    html = html.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="underline break-all" style="color:#B8906C">$1</a>'
+    );
+
+    // Find note titles and wrap them in a data attribute for click handling
+    const noteTitles = notes.filter(n => n.title).map(n => n.title as string);
+    if (noteTitles.length > 0) {
       const escapedTitles = noteTitles
-        .sort((a, b) => b.length - a.length) // longest first
+        .sort((a, b) => b.length - a.length)
         .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       const titleRegex = new RegExp(`(${escapedTitles.join('|')})`, 'gi');
-      const subParts = part.split(titleRegex);
+      html = html.replace(titleRegex, (match) => {
+        const matchedNote = notes.find(n => n.title?.toLowerCase() === match.toLowerCase());
+        if (matchedNote) {
+          return `<button data-note-id="${matchedNote.id}" class="underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit inline" style="color:#B8906C">${match}</button>`;
+        }
+        return match;
+      });
+    }
 
-      if (subParts.length <= 1) return <span key={i}>{part}</span>;
+    const handleClick = (e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const noteId = target.getAttribute('data-note-id');
+      if (noteId) {
+        e.preventDefault();
+        scrollToNote(noteId);
+      }
+    };
 
-      return (
-        <span key={i}>
-          {subParts.map((sub, j) => {
-            const matchedNote = notes.find(n => n.title?.toLowerCase() === sub.toLowerCase());
-            if (matchedNote) {
-              return (
-                <button key={`${i}-${j}`}
-                  className="underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit inline"
-                  style={{ color: '#B8906C' }}
-                  onClick={() => scrollToNote(matchedNote.id)}>
-                  {sub}
-                </button>
-              );
-            }
-            return <span key={`${i}-${j}`}>{sub}</span>;
-          })}
-        </span>
-      );
-    });
-  }, [notes, scrollToNote]);
+    return (
+      <div
+        onClick={handleClick}
+        className="text-[13px] text-foreground leading-relaxed [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:my-1 [&_li]:py-0.5 [&_strong]:font-semibold [&_em]:italic"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }, [notes, scrollToNote, parseMarkdownToHtml]);
 
   const updateNote = useMutation({
     mutationFn: async ({ id, content, title, note_type }: { id: string; content: string; title: string; note_type: string }) => {
@@ -242,7 +265,7 @@ export default function Notes() {
         </div>
         {aiAnswer && (
           <div className="mt-3 rounded-xl bg-secondary p-3">
-            <p className="text-[13px] text-foreground leading-relaxed whitespace-pre-wrap">{renderAiAnswer(aiAnswer)}</p>
+            {renderAiAnswer(aiAnswer)}
           </div>
         )}
       </div>
