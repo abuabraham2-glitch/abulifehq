@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
+import { AddNoteModal } from '@/components/AddNoteModal';
 import { PlanChatSection } from '@/components/PlanChatSection';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
@@ -20,6 +21,7 @@ import { useAppContext } from '@/contexts/AppContext';
 export default function Dashboard() {
   const navigate = useNavigate();
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
   
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
@@ -132,7 +134,14 @@ export default function Dashboard() {
               className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-[20px] text-[13px] md:text-xs font-medium min-h-[44px] md:min-h-0"
               style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
             >
-              + Brain dump
+              + Task
+            </button>
+            <button
+              onClick={() => setNoteOpen(true)}
+              className="flex-1 md:flex-none px-4 py-2.5 md:py-2 rounded-[20px] text-[13px] md:text-xs font-medium min-h-[44px] md:min-h-0"
+              style={{ backgroundColor: '#B8906C', color: '#fff' }}
+            >
+              + Note
             </button>
           </div>
 
@@ -323,6 +332,7 @@ export default function Dashboard() {
       )}
 
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
+      <AddNoteModal open={noteOpen} onOpenChange={setNoteOpen} />
       
       <TaskEditModal task={editTask} open={!!editTask} onOpenChange={(o) => !o && setEditTask(null)} />
       <SkipReasonModal
