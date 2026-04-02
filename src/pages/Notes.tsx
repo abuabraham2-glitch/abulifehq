@@ -219,9 +219,9 @@ export default function Notes() {
         <button
           onClick={() => setAddNoteOpen(true)}
           className="hidden md:flex w-10 h-10 rounded-full items-center justify-center"
-          style={{ backgroundColor: 'hsl(var(--foreground))' }}
+          style={{ backgroundColor: '#5C3D1E' }}
         >
-          <Plus size={18} style={{ color: 'hsl(var(--background))' }} />
+          <Plus size={18} className="text-white" />
         </button>
       </div>
 
