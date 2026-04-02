@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 const NOTE_TYPES = [
   'General', 'Movies & Shows', 'Books & Articles', 'Idea', 'Places & Activities',
   'Memory', 'Reminder', 'People', 'Family', 'Wish List', 'Business', 'Finance',
-  'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference',
+  'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference', 'Recipes',
 ];
 
 const TYPE_COLORS: Record<string, string> = {

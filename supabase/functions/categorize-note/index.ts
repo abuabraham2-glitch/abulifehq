@@ -31,7 +31,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a note categorization assistant. Assign the note to exactly one of these categories: Movies & Shows, Books & Articles, Idea, Places & Activities, Memory, Reminder, People, Family, Wish List, Business, Finance, Home Info, Health & Medical, Quotes, Exercise Log, Logins & Codes, Reference, General. Respond with ONLY a JSON object like: {"note_type": "Idea"}. Nothing else.`,
+            content: `You are a note categorization assistant. Assign the note to exactly one of these categories: Movies & Shows, Books & Articles, Idea, Places & Activities, Memory, Reminder, People, Family, Wish List, Business, Finance, Home Info, Health & Medical, Quotes, Exercise Log, Logins & Codes, Reference, Recipes, General. Respond with ONLY a JSON object like: {"note_type": "Idea"}. Nothing else.`,
           },
           { role: "user", content },
         ],
