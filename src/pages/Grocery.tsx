@@ -250,7 +250,7 @@ export default function Grocery() {
                     )}
                     <span className="font-semibold text-foreground">{section}</span>
                   </div>
-                  <span className={`text-xs text-muted-foreground px-2 py-0.5 rounded-full bg-muted ${uncheckedCount > 0 ? 'border border-[#DC2626]' : ''}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${uncheckedCount > 0 ? 'font-bold text-[#16A34A] border border-[#16A34A] bg-transparent' : 'text-muted-foreground bg-muted'}`}>
                     {uncheckedCount > 0 ? `${uncheckedCount} left` : 'done'}
                   </span>
                 </button>
