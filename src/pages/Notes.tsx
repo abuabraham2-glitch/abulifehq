@@ -333,6 +333,17 @@ export default function Notes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* FAB */}
+      <button
+        onClick={() => setAddNoteOpen(true)}
+        className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
+        style={{ backgroundColor: '#B8906C' }}
+      >
+        <Plus size={26} className="text-white" />
+      </button>
+
+      <AddNoteModal open={addNoteOpen} onOpenChange={setAddNoteOpen} />
     </div>
   );
 }
