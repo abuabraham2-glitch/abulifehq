@@ -15,7 +15,7 @@ serve(async (req) => {
     const { question, notes } = await req.json();
 
     const notesContext = notes
-      .map((n: any, i: number) => `${i + 1}. [${n.note_type || 'General'}] ${n.content}`)
+      .map((n: any, i: number) => `${i + 1}. [${n.note_type || 'General'}]${n.title ? ` Title: "${n.title}"` : ''} ${n.content}`)
       .join("\n");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -29,7 +29,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a personal assistant helping the user search through their notes. Answer their question based only on the notes provided. Be concise and direct.",
+            content: "You are a personal assistant helping the user find information in their notes. When answering, always reference specific notes by their exact title in your response. Format your answer clearly — list the relevant note titles and a brief description of what each contains. If a note has a URL, include it. Always be specific, never vague. Only reference notes that actually exist in the provided list.",
           },
           {
             role: "user",
