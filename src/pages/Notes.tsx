@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, Pencil, Trash2, Loader2 } from 'lucide-react';
+import { Send, Pencil, Trash2, Loader2, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -13,6 +13,12 @@ const NOTE_TYPES = [
   'General', 'Movies & Shows', 'Books & Articles', 'Idea', 'Places & Activities',
   'Memory', 'Reminder', 'People', 'Family', 'Wish List', 'Business', 'Finance',
   'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference', 'Recipes',
+];
+
+const FILTER_ORDER = [
+  'All', 'Movies & Shows', 'Books & Articles', 'Idea', 'Places & Activities',
+  'Memory', 'Reminder', 'People', 'Family', 'Wish List', 'Business', 'Finance',
+  'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference', 'Recipes', 'General',
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -35,6 +41,28 @@ type Note = {
   created_at: string | null;
 };
 
+// Utility: render text with clickable URLs
+function renderLinkedText(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) =>
+    urlRegex.test(part) ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline break-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {part}
+      </a>
+    ) : (
+      <span key={i}>{part}</span>
+    )
+  );
+}
+
 export default function Notes() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('All');
@@ -45,6 +73,7 @@ export default function Notes() {
   const [editContent, setEditContent] = useState('');
   const [editType, setEditType] = useState('General');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedNote, setExpandedNote] = useState<Note | null>(null);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes'],
@@ -107,6 +136,13 @@ export default function Notes() {
     setEditNote(note);
   };
 
+  const handleCardClick = (note: Note, e: React.MouseEvent) => {
+    // Don't expand if clicking edit/delete buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-action]')) return;
+    setExpandedNote(note);
+  };
+
   return (
     <div className="space-y-5 pb-4">
       <h1 className="text-[22px] md:text-[28px] font-medium text-foreground">Notes</h1>
@@ -141,7 +177,7 @@ export default function Notes() {
 
       {/* Filter pills */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" style={{ scrollbarWidth: 'none' }}>
-        {['All', ...NOTE_TYPES].map((t) => (
+        {FILTER_ORDER.map((t) => (
           <button
             key={t}
             onClick={() => setFilter(t)}
@@ -167,8 +203,9 @@ export default function Notes() {
           {filtered.map((note) => (
             <div
               key={note.id}
-              className="rounded-[14px] bg-card p-4"
+              className="rounded-[14px] bg-card p-4 cursor-pointer hover:ring-1 hover:ring-border transition-shadow"
               style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
+              onClick={(e) => handleCardClick(note, e)}
             >
               {note.image_url && (
                 <img
@@ -178,12 +215,14 @@ export default function Notes() {
                 />
               )}
               <div className="flex items-start justify-between gap-2">
-                <p className="text-[14px] text-foreground leading-relaxed flex-1 whitespace-pre-wrap">{note.content}</p>
+                <p className="text-[14px] text-foreground leading-relaxed flex-1 whitespace-pre-wrap line-clamp-4">
+                  {renderLinkedText(note.content)}
+                </p>
                 <div className="flex gap-1 flex-shrink-0">
-                  <button onClick={() => openEdit(note)} className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-secondary">
+                  <button data-action="edit" onClick={() => openEdit(note)} className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-secondary">
                     <Pencil size={14} className="text-muted-foreground" />
                   </button>
-                  <button onClick={() => setDeleteId(note.id)} className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-secondary">
+                  <button data-action="delete" onClick={() => setDeleteId(note.id)} className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-secondary">
                     <Trash2 size={14} className="text-destructive" />
                   </button>
                 </div>
@@ -203,6 +242,41 @@ export default function Notes() {
           ))}
         </div>
       )}
+
+      {/* Expanded Note Modal */}
+      <Dialog open={!!expandedNote} onOpenChange={(o) => !o && setExpandedNote(null)}>
+        <DialogContent className="sm:max-w-lg rounded-[18px] max-h-[85vh] overflow-y-auto">
+          {expandedNote && (
+            <>
+              <DialogHeader className="flex flex-row items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[11px] font-semibold px-2.5 py-1 rounded-full text-white"
+                    style={{ backgroundColor: TYPE_COLORS[expandedNote.note_type || 'General'] || '#9CA3AF' }}
+                  >
+                    {expandedNote.note_type || 'General'}
+                  </span>
+                  <span className="text-[12px] text-muted-foreground">
+                    {expandedNote.created_at ? new Date(expandedNote.created_at).toLocaleDateString() : ''}
+                  </span>
+                </div>
+              </DialogHeader>
+              <div className="space-y-3 py-2">
+                {expandedNote.image_url && (
+                  <img
+                    src={expandedNote.image_url}
+                    alt="Note attachment"
+                    className="w-full max-h-[240px] object-cover rounded-xl"
+                  />
+                )}
+                <p className="text-[14px] text-foreground leading-relaxed whitespace-pre-wrap">
+                  {renderLinkedText(expandedNote.content)}
+                </p>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Modal */}
       <Dialog open={!!editNote} onOpenChange={(o) => !o && setEditNote(null)}>
