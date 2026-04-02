@@ -246,7 +246,7 @@ export default function Notes() {
         </div>
         {aiAnswer && (
           <div className="mt-3 rounded-xl bg-secondary p-3">
-            <p className="text-[13px] text-foreground leading-relaxed whitespace-pre-wrap">{aiAnswer}</p>
+            <p className="text-[13px] text-foreground leading-relaxed whitespace-pre-wrap">{renderAiAnswer(aiAnswer)}</p>
           </div>
         )}
       </div>
@@ -281,8 +281,12 @@ export default function Notes() {
             return (
               <div
                 key={note.id}
-                className="rounded-[14px] bg-card p-4 cursor-pointer hover:ring-1 hover:ring-border transition-shadow"
-                style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
+                ref={(el) => { noteRefs.current[note.id] = el; }}
+                className={`rounded-[14px] bg-card p-4 cursor-pointer hover:ring-1 hover:ring-border transition-all duration-300 ${highlightedNoteId === note.id ? 'ring-2 animate-pulse' : ''}`}
+                style={{
+                  border: '0.5px solid rgba(0,0,0,0.04)',
+                  ...(highlightedNoteId === note.id ? { ringColor: '#B8906C', boxShadow: '0 0 0 2px #B8906C' } : {}),
+                }}
                 onClick={(e) => handleCardClick(note, e)}
               >
                 {note.image_url && (
