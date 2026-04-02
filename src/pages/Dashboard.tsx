@@ -225,7 +225,7 @@ export default function Dashboard() {
                     {currentItem.item.category || 'Buffer'}
                   </span>
                 </div>
-                <h2 className="text-lg md:text-xl font-medium text-foreground mb-1">{currentItem.item.title}</h2>
+                <h2 className="text-base md:text-xl font-medium text-foreground mb-1 break-words">{currentItem.item.title}</h2>
                 <p className="text-[13px] text-muted-foreground mb-1">
                   {formatTime12h(currentItem.item.start_time)} — {formatTime12h(currentItem.item.end_time)}
                 </p>
@@ -236,17 +236,17 @@ export default function Dashboard() {
 
                 <FocusTimer />
 
-                <div className="flex justify-center gap-3">
+                <div className="flex justify-center gap-3 w-full md:w-auto">
                   <button
                     onClick={() => setSkipItem(currentItem.item)}
-                    className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
+                    className="flex-1 md:flex-none px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--secondary))', color: 'hsl(var(--muted-foreground))' }}
                   >
                     Skip
                   </button>
                   <button
                     onClick={() => openDoneDialog(currentItem.item)}
-                    className="px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
+                    className="flex-1 md:flex-none px-7 py-3 md:py-2.5 rounded-xl text-[14px] md:text-sm font-medium min-h-[48px] md:min-h-0"
                     style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
                   >
                     ✓ Done
@@ -267,7 +267,7 @@ export default function Dashboard() {
                 {upNextItems.slice(0, 5).map((item, idx) => (
                   <div
                     key={item.id}
-                    className="flex items-center gap-3 rounded-r-[14px] rounded-l-none p-3.5 min-h-[48px]"
+                    className="flex items-center gap-3 rounded-r-[14px] rounded-l-none p-3.5 min-h-[52px]"
                     style={{
                       backgroundColor: `rgba(255,255,255,${opacities[idx] ?? 0.35})`,
                       borderLeft: `4px solid ${getCategoryColor(item.category)}`,
@@ -279,12 +279,12 @@ export default function Dashboard() {
                       style={{ borderColor: 'hsl(var(--border))' }}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[14px] md:text-[13px] up-next-task-name">{item.title}</p>
-                      <p className="text-[13px] md:text-[11px] font-semibold up-next-time">
+                      <p className="text-[14px] md:text-[13px] up-next-task-name truncate">{item.title}</p>
+                      <p className="text-[12px] md:text-[11px] font-semibold up-next-time">
                         {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
                       </p>
                     </div>
-                    <span className="text-[15px] font-medium flex-shrink-0" style={{ color: getCategoryColor(item.category) }}>
+                    <span className="text-[13px] md:text-[15px] font-medium flex-shrink-0 whitespace-nowrap" style={{ color: getCategoryColor(item.category) }}>
                       {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
                     </span>
                   </div>

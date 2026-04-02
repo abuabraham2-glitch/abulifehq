@@ -40,7 +40,7 @@ export function BrainDumpModal({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-medium">What's on your mind?</DialogTitle>
         </DialogHeader>
@@ -48,8 +48,8 @@ export function BrainDumpModal({ open, onOpenChange }: Props) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Dump it here..."
-          rows={4}
-          className="resize-none"
+          rows={6}
+          className="resize-none min-h-[160px]"
         />
         <Button
           onClick={handleSubmit}

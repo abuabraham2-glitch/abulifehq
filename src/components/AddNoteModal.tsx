@@ -147,7 +147,7 @@ export function AddNoteModal({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) resetAndClose(); else onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-md rounded-[18px]">
+      <DialogContent className="sm:max-w-md rounded-[18px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-base font-medium">
             {step === 'confirm' ? 'Confirm Note' : 'New Note'}
@@ -176,13 +176,13 @@ export function AddNoteModal({ open, onOpenChange }: Props) {
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Write your note..."
-                    rows={4}
-                    className="resize-none pr-12"
+                    rows={6}
+                    className="resize-none pr-12 min-h-[160px]"
                   />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute right-2 top-2 p-2 rounded-lg hover:bg-secondary min-w-[36px] min-h-[36px] flex items-center justify-center"
+                    className="absolute right-2 top-2 p-2 rounded-lg hover:bg-secondary min-w-[44px] min-h-[44px] flex items-center justify-center"
                     title="Upload photo"
                   >
                     <Camera size={18} className="text-muted-foreground" />
