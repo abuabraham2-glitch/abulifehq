@@ -75,6 +75,7 @@ export default function Notes() {
   const [editType, setEditType] = useState('General');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedNote, setExpandedNote] = useState<Note | null>(null);
+  const [addNoteOpen, setAddNoteOpen] = useState(false);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes'],
