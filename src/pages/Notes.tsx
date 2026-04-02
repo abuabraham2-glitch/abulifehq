@@ -19,9 +19,9 @@ const NOTE_TYPES = [
 ];
 
 const FILTER_ORDER = [
-  'All', 'Movies & Shows', 'Books & Articles', 'Idea', 'Places & Activities',
-  'Memory', 'Reminder', 'People', 'Family', 'Wish List', 'Business', 'Finance',
-  'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference', 'Recipes', 'General',
+  'All', 'Books & Articles', 'Business', 'Exercise Log', 'Family', 'Finance',
+  'General', 'Health & Medical', 'Home Info', 'Idea', 'Logins & Codes', 'Memory',
+  'Movies & Shows', 'People', 'Places & Activities', 'Quotes', 'Recipes', 'Reference', 'Reminder', 'Wish List',
 ];
 
 const TYPE_COLORS: Record<string, string> = {
