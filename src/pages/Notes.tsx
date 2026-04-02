@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Pencil, Trash2, Loader2, Plus } from 'lucide-react';
 import { AddNoteModal } from '@/components/AddNoteModal';
@@ -77,6 +77,17 @@ export default function Notes() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedNote, setExpandedNote] = useState<Note | null>(null);
   const [addNoteOpen, setAddNoteOpen] = useState(false);
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
+  const noteRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const scrollToNote = useCallback((noteId: string) => {
+    const el = noteRefs.current[noteId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedNoteId(noteId);
+      setTimeout(() => setHighlightedNoteId(null), 2000);
+    }
+  }, []);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes'],
@@ -91,6 +102,57 @@ export default function Notes() {
   });
 
   const filtered = filter === 'All' ? notes : notes.filter((n) => n.note_type === filter);
+
+  const findNoteByReference = useCallback((ref: string): Note | undefined => {
+    const lower = ref.toLowerCase().trim();
+    return notes.find(n => n.title?.toLowerCase() === lower)
+      || notes.find(n => n.title?.toLowerCase().includes(lower))
+      || notes.find(n => n.content.toLowerCase().includes(lower));
+  }, [notes]);
+
+  const renderAiAnswer = useCallback((text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+      if (urlRegex.test(part)) {
+        return (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+            className="underline break-all" style={{ color: '#B8906C' }}>
+            {part}
+          </a>
+        );
+      }
+      const quoteRegex = /[""«]([^""»]+)[""»]/g;
+      const subParts: React.ReactNode[] = [];
+      let lastIdx = 0;
+      let match: RegExpExecArray | null;
+      while ((match = quoteRegex.exec(part)) !== null) {
+        if (match.index > lastIdx) {
+          subParts.push(<span key={`${i}-${lastIdx}`}>{part.slice(lastIdx, match.index)}</span>);
+        }
+        const refText = match[1];
+        const foundNote = findNoteByReference(refText);
+        if (foundNote) {
+          subParts.push(
+            <button key={`${i}-${match.index}`}
+              className="underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit inline"
+              style={{ color: '#B8906C' }}
+              onClick={() => scrollToNote(foundNote.id)}>
+              "{refText}"
+            </button>
+          );
+        } else {
+          subParts.push(<span key={`${i}-${match.index}`}>"{refText}"</span>);
+        }
+        lastIdx = match.index + match[0].length;
+      }
+      if (subParts.length > 0) {
+        if (lastIdx < part.length) subParts.push(<span key={`${i}-end`}>{part.slice(lastIdx)}</span>);
+        return <span key={i}>{subParts}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  }, [findNoteByReference, scrollToNote]);
 
   const updateNote = useMutation({
     mutationFn: async ({ id, content, title, note_type }: { id: string; content: string; title: string; note_type: string }) => {
@@ -184,7 +246,7 @@ export default function Notes() {
         </div>
         {aiAnswer && (
           <div className="mt-3 rounded-xl bg-secondary p-3">
-            <p className="text-[13px] text-foreground leading-relaxed whitespace-pre-wrap">{aiAnswer}</p>
+            <p className="text-[13px] text-foreground leading-relaxed whitespace-pre-wrap">{renderAiAnswer(aiAnswer)}</p>
           </div>
         )}
       </div>
@@ -219,8 +281,12 @@ export default function Notes() {
             return (
               <div
                 key={note.id}
-                className="rounded-[14px] bg-card p-4 cursor-pointer hover:ring-1 hover:ring-border transition-shadow"
-                style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
+                ref={(el) => { noteRefs.current[note.id] = el; }}
+                className={`rounded-[14px] bg-card p-4 cursor-pointer hover:ring-1 hover:ring-border transition-all duration-300 ${highlightedNoteId === note.id ? 'ring-2 animate-pulse' : ''}`}
+                style={{
+                  border: '0.5px solid rgba(0,0,0,0.04)',
+                  ...(highlightedNoteId === note.id ? { ringColor: '#B8906C', boxShadow: '0 0 0 2px #B8906C' } : {}),
+                }}
                 onClick={(e) => handleCardClick(note, e)}
               >
                 {note.image_url && (
