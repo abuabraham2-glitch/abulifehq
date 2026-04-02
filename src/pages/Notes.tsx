@@ -103,12 +103,6 @@ export default function Notes() {
 
   const filtered = filter === 'All' ? notes : notes.filter((n) => n.note_type === filter);
 
-  const findNoteByReference = useCallback((ref: string): Note | undefined => {
-    const lower = ref.toLowerCase().trim();
-    return notes.find(n => n.title?.toLowerCase() === lower)
-      || notes.find(n => n.title?.toLowerCase().includes(lower))
-      || notes.find(n => n.content.toLowerCase().includes(lower));
-  }, [notes]);
 
   const renderAiAnswer = useCallback((text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
