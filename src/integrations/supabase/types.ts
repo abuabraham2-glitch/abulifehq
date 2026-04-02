@@ -152,6 +152,7 @@ export type Database = {
           note_type: string | null
           reminder_date: string | null
           tags: string[] | null
+          title: string | null
         }
         Insert: {
           ai_summary?: string | null
@@ -162,6 +163,7 @@ export type Database = {
           note_type?: string | null
           reminder_date?: string | null
           tags?: string[] | null
+          title?: string | null
         }
         Update: {
           ai_summary?: string | null
@@ -172,6 +174,7 @@ export type Database = {
           note_type?: string | null
           reminder_date?: string | null
           tags?: string[] | null
+          title?: string | null
         }
         Relationships: []
       }
