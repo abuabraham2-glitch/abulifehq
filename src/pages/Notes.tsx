@@ -29,6 +29,7 @@ type Note = {
   content: string;
   note_type: string | null;
   ai_summary: string | null;
+  image_url: string | null;
   reminder_date: string | null;
   tags: string[] | null;
   created_at: string | null;
