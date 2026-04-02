@@ -100,6 +100,30 @@ export type Database = {
         }
         Relationships: []
       }
+      grocery_items: {
+        Row: {
+          checked: boolean | null
+          created_at: string | null
+          id: string
+          item: string
+          section: string | null
+        }
+        Insert: {
+          checked?: boolean | null
+          created_at?: string | null
+          id?: string
+          item: string
+          section?: string | null
+        }
+        Update: {
+          checked?: boolean | null
+          created_at?: string | null
+          id?: string
+          item?: string
+          section?: string | null
+        }
+        Relationships: []
+      }
       life_context: {
         Row: {
           context_text: string
@@ -115,6 +139,36 @@ export type Database = {
           context_text?: string
           created_at?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      notes: {
+        Row: {
+          ai_summary: string | null
+          content: string
+          created_at: string | null
+          id: string
+          note_type: string | null
+          reminder_date: string | null
+          tags: string[] | null
+        }
+        Insert: {
+          ai_summary?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          note_type?: string | null
+          reminder_date?: string | null
+          tags?: string[] | null
+        }
+        Update: {
+          ai_summary?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          note_type?: string | null
+          reminder_date?: string | null
+          tags?: string[] | null
         }
         Relationships: []
       }
