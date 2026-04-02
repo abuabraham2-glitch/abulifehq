@@ -21,7 +21,7 @@ const TYPE_COLORS: Record<string, string> = {
   'People': '#6366F1', 'Family': '#D946EF', 'Wish List': '#F97316', 'Business': '#0EA5E9',
   'Finance': '#14B8A6', 'Home Info': '#84CC16', 'Health & Medical': '#F43F5E',
   'Quotes': '#B8906C', 'Exercise Log': '#22C55E', 'Logins & Codes': '#64748B',
-  'Reference': '#78716C', 'General': '#9CA3AF',
+  'Reference': '#78716C', 'Recipes': '#E11D48', 'General': '#9CA3AF',
 };
 
 type Note = {
