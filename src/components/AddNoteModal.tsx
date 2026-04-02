@@ -11,7 +11,7 @@ import { Loader2, Camera } from 'lucide-react';
 const NOTE_TYPES = [
   'General', 'Movies & Shows', 'Books & Articles', 'Idea', 'Places & Activities',
   'Memory', 'Reminder', 'People', 'Family', 'Wish List', 'Business', 'Finance',
-  'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference',
+  'Home Info', 'Health & Medical', 'Quotes', 'Exercise Log', 'Logins & Codes', 'Reference', 'Recipes',
 ];
 
 interface Props {
