@@ -31,7 +31,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a note categorization assistant. Assign the note to exactly one of these categories: Movies & Shows, Books & Articles, Idea, Places & Activities, Memory, Reminder, People, Family, Wish List, Business, Finance, Home Info, Health & Medical, Quotes, Exercise Log, Logins & Codes, Reference, Recipes, General. Respond with ONLY a JSON object like: {"note_type": "Idea"}. Nothing else.`,
+            content: `You are a note assistant. Read the note content and return ONLY a JSON object with two fields: note_type (one of: Movies & Shows, Books & Articles, Idea, Places & Activities, Memory, Reminder, People, Family, Wish List, Business, Finance, Home Info, Health & Medical, Quotes, Exercise Log, Logins & Codes, Reference, Recipes, General) and suggested_title (a short 2-6 word title that describes the note — for URLs extract the topic, for lists use the subject, for ideas summarize it). Example: {"note_type": "Recipes", "suggested_title": "Honey Garlic Roasted Carrots"}. Nothing else.`,
           },
           { role: "user", content },
         ],
@@ -50,16 +50,20 @@ serve(async (req) => {
     const data = await response.json();
     const raw = data.choices?.[0]?.message?.content || "";
     
-    // Parse the JSON from the response
     let noteType = "General";
+    let suggestedTitle = "";
     try {
-      const match = raw.match(/\{[^}]*"note_type"\s*:\s*"([^"]+)"[^}]*\}/);
-      if (match) noteType = match[1];
+      const jsonMatch = raw.match(/\{[^}]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.note_type) noteType = parsed.note_type;
+        if (parsed.suggested_title) suggestedTitle = parsed.suggested_title;
+      }
     } catch {
       noteType = "General";
     }
 
-    return new Response(JSON.stringify({ note_type: noteType }), {
+    return new Response(JSON.stringify({ note_type: noteType, suggested_title: suggestedTitle }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
