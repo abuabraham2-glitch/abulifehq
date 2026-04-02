@@ -122,37 +122,39 @@ export default function Notes() {
           </a>
         );
       }
-      const quoteRegex = /[""«]([^""»]+)[""»]/g;
-      const subParts: React.ReactNode[] = [];
-      let lastIdx = 0;
-      let match: RegExpExecArray | null;
-      while ((match = quoteRegex.exec(part)) !== null) {
-        if (match.index > lastIdx) {
-          subParts.push(<span key={`${i}-${lastIdx}`}>{part.slice(lastIdx, match.index)}</span>);
-        }
-        const refText = match[1];
-        const foundNote = findNoteByReference(refText);
-        if (foundNote) {
-          subParts.push(
-            <button key={`${i}-${match.index}`}
-              className="underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit inline"
-              style={{ color: '#B8906C' }}
-              onClick={() => scrollToNote(foundNote.id)}>
-              "{refText}"
-            </button>
-          );
-        } else {
-          subParts.push(<span key={`${i}-${match.index}`}>"{refText}"</span>);
-        }
-        lastIdx = match.index + match[0].length;
-      }
-      if (subParts.length > 0) {
-        if (lastIdx < part.length) subParts.push(<span key={`${i}-end`}>{part.slice(lastIdx)}</span>);
-        return <span key={i}>{subParts}</span>;
-      }
-      return <span key={i}>{part}</span>;
+      // Find exact note title matches in the text
+      const noteTitles = notes.filter(n => n.title).map(n => n.title as string);
+      if (noteTitles.length === 0) return <span key={i}>{part}</span>;
+
+      // Build regex to match any note title
+      const escapedTitles = noteTitles
+        .sort((a, b) => b.length - a.length) // longest first
+        .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const titleRegex = new RegExp(`(${escapedTitles.join('|')})`, 'gi');
+      const subParts = part.split(titleRegex);
+
+      if (subParts.length <= 1) return <span key={i}>{part}</span>;
+
+      return (
+        <span key={i}>
+          {subParts.map((sub, j) => {
+            const matchedNote = notes.find(n => n.title?.toLowerCase() === sub.toLowerCase());
+            if (matchedNote) {
+              return (
+                <button key={`${i}-${j}`}
+                  className="underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit inline"
+                  style={{ color: '#B8906C' }}
+                  onClick={() => scrollToNote(matchedNote.id)}>
+                  {sub}
+                </button>
+              );
+            }
+            return <span key={`${i}-${j}`}>{sub}</span>;
+          })}
+        </span>
+      );
     });
-  }, [findNoteByReference, scrollToNote]);
+  }, [notes, scrollToNote]);
 
   const updateNote = useMutation({
     mutationFn: async ({ id, content, title, note_type }: { id: string; content: string; title: string; note_type: string }) => {
@@ -184,7 +186,7 @@ export default function Notes() {
     setAiAnswer('');
     try {
       const { data, error } = await supabase.functions.invoke('notes-ai', {
-        body: { question: question.trim(), notes: notes.map((n) => ({ content: n.content, note_type: n.note_type })) },
+      body: { question: question.trim(), notes: notes.map((n) => ({ content: n.content, note_type: n.note_type, title: n.title })) },
       });
       if (error) throw error;
       setAiAnswer(data.answer || 'No answer found.');
@@ -441,7 +443,7 @@ export default function Notes() {
         <button
           onClick={() => setAddNoteOpen(true)}
           className="fixed bottom-24 right-5 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95"
-          style={{ backgroundColor: '#B8906C' }}
+          style={{ backgroundColor: '#5C3D1E' }}
         >
           <Plus size={26} className="text-white" />
         </button>

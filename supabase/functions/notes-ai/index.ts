@@ -15,7 +15,7 @@ serve(async (req) => {
     const { question, notes } = await req.json();
 
     const notesContext = notes
-      .map((n: any, i: number) => `${i + 1}. [${n.note_type || 'General'}] ${n.content}`)
+      .map((n: any, i: number) => `${i + 1}. [${n.note_type || 'General'}]${n.title ? ` Title: "${n.title}"` : ''} ${n.content}`)
       .join("\n");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
