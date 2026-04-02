@@ -271,12 +271,12 @@ export default function Notes() {
       </div>
 
       {/* Filter pills */}
-      <div className="flex flex-wrap gap-2 pb-1">
+      <div className="flex flex-wrap gap-2 md:gap-2 gap-y-2.5 pb-1">
         {FILTER_ORDER.map((t) => (
           <button
             key={t}
             onClick={() => setFilter(t)}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium min-h-[32px] transition-colors"
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-[12px] font-medium min-h-[36px] md:min-h-[32px] transition-colors"
             style={
               filter === t
                 ? { backgroundColor: '#B8906C', color: '#fff' }
@@ -333,10 +333,10 @@ export default function Notes() {
                     )}
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
-                    <button data-action="edit" onClick={() => openEdit(note)} className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-secondary">
+                    <button data-action="edit" onClick={() => openEdit(note)} className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-secondary flex items-center justify-center">
                       <Pencil size={14} className="text-muted-foreground" />
                     </button>
-                    <button data-action="delete" onClick={() => setDeleteId(note.id)} className="p-2 min-w-[36px] min-h-[36px] rounded-lg hover:bg-secondary">
+                    <button data-action="delete" onClick={() => setDeleteId(note.id)} className="p-2 min-w-[44px] min-h-[44px] rounded-lg hover:bg-secondary flex items-center justify-center">
                       <Trash2 size={14} className="text-destructive" />
                     </button>
                   </div>
@@ -394,7 +394,7 @@ export default function Notes() {
 
       {/* Edit Modal */}
       <Dialog open={!!editNote} onOpenChange={(o) => !o && setEditNote(null)}>
-        <DialogContent className="max-w-[400px] rounded-[18px]">
+        <DialogContent className="max-w-[400px] rounded-[18px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-[16px]">Edit Note</DialogTitle>
           </DialogHeader>

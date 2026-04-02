@@ -29,7 +29,7 @@ export function FocusTimer({ onStart }: FocusTimerProps) {
   return (
     <button
       onClick={handleStart}
-      className="mx-auto mb-5 px-6 py-3 rounded-xl text-[14px] font-medium flex items-center gap-2 min-h-[48px] md:min-h-0"
+      className="mx-auto mb-5 px-6 py-3 rounded-xl text-[14px] font-medium flex items-center justify-center gap-2 min-h-[48px] w-full md:w-auto"
       style={{ backgroundColor: 'hsl(var(--secondary))' }}
     >
       ▶ Start
