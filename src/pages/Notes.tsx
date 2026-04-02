@@ -77,6 +77,69 @@ export default function Notes() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [expandedNote, setExpandedNote] = useState<Note | null>(null);
   const [addNoteOpen, setAddNoteOpen] = useState(false);
+  const [highlightedNoteId, setHighlightedNoteId] = useState<string | null>(null);
+  const noteRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const scrollToNote = useCallback((noteId: string) => {
+    const el = noteRefs.current[noteId];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedNoteId(noteId);
+      setTimeout(() => setHighlightedNoteId(null), 2000);
+    }
+  }, []);
+
+  const findNoteByReference = useCallback((ref: string): Note | undefined => {
+    const lower = ref.toLowerCase().trim();
+    return notes.find(n => n.title?.toLowerCase() === lower)
+      || notes.find(n => n.title?.toLowerCase().includes(lower))
+      || notes.find(n => n.content.toLowerCase().includes(lower));
+  }, [notes]);
+
+  const renderAiAnswer = useCallback((text: string) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+    return parts.map((part, i) => {
+      if (urlRegex.test(part)) {
+        return (
+          <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+            className="underline break-all" style={{ color: '#B8906C' }}>
+            {part}
+          </a>
+        );
+      }
+      // Look for quoted references like "Title Here" or 「Title」
+      const quoteRegex = /[""«]([^""»]+)[""»]/g;
+      const subParts: React.ReactNode[] = [];
+      let lastIdx = 0;
+      let match: RegExpExecArray | null;
+      while ((match = quoteRegex.exec(part)) !== null) {
+        if (match.index > lastIdx) {
+          subParts.push(<span key={`${i}-${lastIdx}`}>{part.slice(lastIdx, match.index)}</span>);
+        }
+        const refText = match[1];
+        const foundNote = findNoteByReference(refText);
+        if (foundNote) {
+          subParts.push(
+            <button key={`${i}-${match.index}`}
+              className="underline cursor-pointer bg-transparent border-none p-0 font-inherit text-inherit inline"
+              style={{ color: '#B8906C' }}
+              onClick={() => scrollToNote(foundNote.id)}>
+              "{refText}"
+            </button>
+          );
+        } else {
+          subParts.push(<span key={`${i}-${match.index}`}>"{refText}"</span>);
+        }
+        lastIdx = match.index + match[0].length;
+      }
+      if (subParts.length > 0) {
+        if (lastIdx < part.length) subParts.push(<span key={`${i}-end`}>{part.slice(lastIdx)}</span>);
+        return <span key={i}>{subParts}</span>;
+      }
+      return <span key={i}>{part}</span>;
+    });
+  }, [findNoteByReference, scrollToNote]);
 
   const { data: notes = [], isLoading } = useQuery({
     queryKey: ['notes'],
