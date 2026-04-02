@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, ListTodo, Grid3X3, Inbox, Moon, Sun } from 'lucide-react';
+import { Home, ListTodo, Grid3X3, Inbox, Moon, Sun, ShoppingCart } from 'lucide-react';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useTheme } from '@/components/ThemeProvider';
 
@@ -8,6 +8,7 @@ const navItems = [
   { to: '/tasks', icon: ListTodo, label: 'Tasks' },
   { to: '/matrix', icon: Grid3X3, label: 'Matrix' },
   { to: '/triage', icon: Inbox, label: 'Triage', showBadge: true },
+  { to: '/grocery', icon: ShoppingCart, label: 'Grocery' },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
