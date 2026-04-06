@@ -17,7 +17,7 @@ import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } fro
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
 import { getGreeting, formatDate, getRandomPhrase, getCategoryColor, formatTime12h } from '@/lib/constants';
-import { useAppContext } from '@/contexts/AppContext';
+
 
 export default function Dashboard() {
   const navigate = useNavigate();
