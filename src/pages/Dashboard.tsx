@@ -117,7 +117,7 @@ export default function Dashboard() {
 
   const loading = loadingPlan || loadingItems;
   const hasPlan = !!plan && !!planItems?.length;
-  const planSummary = plan?.ai_notes || (typeof plan?.plan_data === 'string' ? plan.plan_data : null);
+  
 
   const opacities = [0.55, 0.50, 0.45, 0.40, 0.35];
 
