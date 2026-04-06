@@ -64,9 +64,13 @@ export default function Dashboard() {
     return pendingItems.slice(idx + 1).filter((i) => i.start_time >= nowPacificTime);
   }, [pendingItems, currentItem, nowPacificTime]);
 
-  const completedItems = useMemo(() => {
-    return planItems?.filter((i) => i.status === 'completed') ?? [];
+  const realTaskItems = useMemo(() => {
+    return planItems?.filter((i) => !i.is_calendar_event && i.task_id != null) ?? [];
   }, [planItems]);
+
+  const completedItems = useMemo(() => {
+    return realTaskItems.filter((i) => i.status === 'completed');
+  }, [realTaskItems]);
 
   const totalPlannedMinutes = useMemo(() => {
     return planItems?.reduce((s, i) => s + (i.est_minutes || 0), 0) ?? 0;
@@ -292,11 +296,11 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-[13px] font-medium wins-label">Today's wins</p>
               <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
-                {completedItems.length}/{planItems?.length ?? 0}
+                {completedItems.length}/{realTaskItems.length}
               </p>
             </div>
             <div className="flex gap-1 mb-3">
-              {planItems?.map((item, i) => (
+              {realTaskItems.map((item, i) => (
                 <div
                   key={item.id}
                   className="h-1 flex-1 rounded-sm"
