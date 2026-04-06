@@ -14,6 +14,7 @@ import { SkipReasonModal } from '@/components/SkipReasonModal';
 import { FullSchedule } from '@/components/FullSchedule';
 import { DayStripCard } from '@/components/DayStripCard';
 import { CalendarBanner } from '@/components/CalendarBanner';
+import { PatternInsightCard } from '@/components/PatternInsightCard';
 import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
@@ -209,6 +210,9 @@ export default function Dashboard() {
 
           {/* Calendar events banner */}
           <CalendarBanner />
+
+          {/* Pattern insight */}
+          <PatternInsightCard />
 
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} />

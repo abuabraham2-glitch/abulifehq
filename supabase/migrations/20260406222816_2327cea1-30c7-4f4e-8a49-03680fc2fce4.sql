@@ -1,0 +1,1 @@
+ALTER TABLE public.tasks ADD COLUMN deferred_until date DEFAULT NULL;
