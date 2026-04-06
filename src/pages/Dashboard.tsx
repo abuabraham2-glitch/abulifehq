@@ -207,6 +207,9 @@ export default function Dashboard() {
           {/* Day Strip */}
           <DayStripCard />
 
+          {/* Calendar events banner */}
+          <CalendarBanner />
+
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} />
 
