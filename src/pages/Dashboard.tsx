@@ -64,9 +64,13 @@ export default function Dashboard() {
     return pendingItems.slice(idx + 1).filter((i) => i.start_time >= nowPacificTime);
   }, [pendingItems, currentItem, nowPacificTime]);
 
-  const completedItems = useMemo(() => {
-    return planItems?.filter((i) => i.status === 'completed') ?? [];
+  const realTaskItems = useMemo(() => {
+    return planItems?.filter((i) => !i.is_calendar_event && i.task_id != null) ?? [];
   }, [planItems]);
+
+  const completedItems = useMemo(() => {
+    return realTaskItems.filter((i) => i.status === 'completed');
+  }, [realTaskItems]);
 
   const totalPlannedMinutes = useMemo(() => {
     return planItems?.reduce((s, i) => s + (i.est_minutes || 0), 0) ?? 0;
