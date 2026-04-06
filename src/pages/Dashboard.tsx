@@ -300,7 +300,7 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex gap-1 mb-3">
-              {planItems?.map((item, i) => (
+              {realTaskItems.map((item, i) => (
                 <div
                   key={item.id}
                   className="h-1 flex-1 rounded-sm"
