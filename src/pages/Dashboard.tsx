@@ -199,10 +199,8 @@ export default function Dashboard() {
 
       {!loading && hasPlan && (
         <>
-          {/* Plan Summary */}
-          {!planDismissed && (
-            <PlanSummaryCard onDismiss={dismissPlan} />
-          )}
+          {/* Day Strip */}
+          <DayStripCard />
 
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} />
