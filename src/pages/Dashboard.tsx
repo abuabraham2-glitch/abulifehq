@@ -200,8 +200,8 @@ export default function Dashboard() {
       {!loading && hasPlan && (
         <>
           {/* Plan Summary */}
-          {planSummary && !planDismissed && (
-            <PlanSummaryCard summary={planSummary} onDismiss={dismissPlan} />
+          {!planDismissed && (
+            <PlanSummaryCard onDismiss={dismissPlan} />
           )}
 
           {/* Chat input for plan revisions */}
