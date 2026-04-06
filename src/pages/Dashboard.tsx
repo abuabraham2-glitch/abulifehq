@@ -12,7 +12,7 @@ import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
 import { SkipReasonModal } from '@/components/SkipReasonModal';
 import { FullSchedule } from '@/components/FullSchedule';
-import { PlanSummaryCard } from '@/components/PlanSummaryCard';
+import { DayStripCard } from '@/components/DayStripCard';
 import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
