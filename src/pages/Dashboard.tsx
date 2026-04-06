@@ -201,15 +201,7 @@ export default function Dashboard() {
         <>
           {/* Plan Summary */}
           {planSummary && !planDismissed && (
-            <div className="rounded-[14px] bg-card p-4" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
-              <p className="text-[13px] font-medium mb-2" style={{ color: '#B8906C' }}>📋 Today's plan</p>
-              <p className="text-[14px] text-foreground leading-relaxed">{planSummary}</p>
-              <div className="text-right mt-2">
-                <button onClick={dismissPlan} className="text-[13px] font-medium min-h-[44px] md:min-h-0" style={{ color: '#B8906C' }}>
-                  Got it, dismiss
-                </button>
-              </div>
-            </div>
+            <PlanSummaryCard summary={planSummary} onDismiss={dismissPlan} />
           )}
 
           {/* Chat input for plan revisions */}
