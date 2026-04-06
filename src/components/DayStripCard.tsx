@@ -19,7 +19,7 @@ export function DayStripCard() {
   const { data: items } = useTodayPlanItems();
 
   const taskItems = useMemo(
-    () => items?.filter((i) => !i.is_calendar_event) ?? [],
+    () => items?.filter((i) => !i.is_calendar_event && i.task_id != null) ?? [],
     [items],
   );
 
