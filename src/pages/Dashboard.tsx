@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
-  const { planDismissed, dismissPlan } = useAppContext();
+  
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
