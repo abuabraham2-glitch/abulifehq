@@ -330,6 +330,7 @@ export type Database = {
           category: string | null
           completed_at: string | null
           created_at: string | null
+          deferred_until: string | null
           due_date: string | null
           est_minutes: number | null
           id: string
@@ -352,6 +353,7 @@ export type Database = {
           category?: string | null
           completed_at?: string | null
           created_at?: string | null
+          deferred_until?: string | null
           due_date?: string | null
           est_minutes?: number | null
           id?: string
@@ -374,6 +376,7 @@ export type Database = {
           category?: string | null
           completed_at?: string | null
           created_at?: string | null
+          deferred_until?: string | null
           due_date?: string | null
           est_minutes?: number | null
           id?: string
