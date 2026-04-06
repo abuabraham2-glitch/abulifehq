@@ -12,7 +12,7 @@ import { TaskEditModal } from '@/components/TaskEditModal';
 import { FocusTimer } from '@/components/FocusTimer';
 import { SkipReasonModal } from '@/components/SkipReasonModal';
 import { FullSchedule } from '@/components/FullSchedule';
-import { PlanSummaryCard } from '@/components/PlanSummaryCard';
+import { DayStripCard } from '@/components/DayStripCard';
 import { useTodayPlan, useTodayPlanItems, useUpdatePlanItem, type PlanItem } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { useCompleteTask, type Task } from '@/hooks/useTasks';
@@ -28,7 +28,7 @@ export default function Dashboard() {
   const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
-  const { planDismissed, dismissPlan } = useAppContext();
+  
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -199,10 +199,8 @@ export default function Dashboard() {
 
       {!loading && hasPlan && (
         <>
-          {/* Plan Summary */}
-          {!planDismissed && (
-            <PlanSummaryCard onDismiss={dismissPlan} />
-          )}
+          {/* Day Strip */}
+          <DayStripCard />
 
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} />
