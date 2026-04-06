@@ -211,6 +211,9 @@ export default function Dashboard() {
           {/* Calendar events banner */}
           <CalendarBanner />
 
+          {/* Pattern insight */}
+          <PatternInsightCard />
+
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} />
 
