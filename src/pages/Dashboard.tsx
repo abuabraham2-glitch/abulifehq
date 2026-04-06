@@ -296,7 +296,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-3">
               <p className="text-[13px] font-medium wins-label">Today's wins</p>
               <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
-                {completedItems.length}/{planItems?.length ?? 0}
+                {completedItems.length}/{realTaskItems.length}
               </p>
             </div>
             <div className="flex gap-1 mb-3">
