@@ -18,10 +18,20 @@ export function DayStripCard() {
 
   const { data: items } = useTodayPlanItems();
 
-  const taskItems = useMemo(
-    () => items?.filter((i) => !i.is_calendar_event && i.task_id != null) ?? [],
-    [items],
-  );
+  const taskItems = useMemo(() => {
+    const skip = (t: string) => {
+      const l = t.toLowerCase();
+      return (
+        l.startsWith('buffer') ||
+        l === 'lunch break' ||
+        l.includes('victory hour') ||
+        l.startsWith('school pickup') ||
+        l.includes('wind down') ||
+        l.includes('morning routine')
+      );
+    };
+    return items?.filter((i) => !i.is_calendar_event && !skip(i.title)) ?? [];
+  }, [items]);
 
   const taskCount = taskItems.length;
   const totalMin = useMemo(

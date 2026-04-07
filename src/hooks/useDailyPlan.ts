@@ -81,10 +81,10 @@ export function useUpdatePlanItem() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, status, actual_minutes, skip_reason, task_id }: { id: string; status: string; actual_minutes?: number; skip_reason?: string; task_id?: string | null }) => {
-      const update: Record<string, unknown> = { status };
+      const update: Partial<{ status: string; actual_minutes: number; skip_reason: string }> = { status };
       if (actual_minutes !== undefined) update.actual_minutes = actual_minutes;
       if (skip_reason !== undefined) update.skip_reason = skip_reason;
-      const { error } = await supabase.from('plan_items').update(update).eq('id', id);
+      const { error } = await supabase.from('plan_items').update(update as any).eq('id', id);
       if (error) throw error;
       // Also save skip_reason to the tasks table if task_id is set
       if (skip_reason && task_id) {
