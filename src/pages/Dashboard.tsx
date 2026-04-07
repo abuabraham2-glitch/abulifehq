@@ -81,7 +81,11 @@ export default function Dashboard() {
   }, [winsEligibleItems]);
 
   const totalPlannedMinutes = useMemo(() => {
-    return planItems?.reduce((s, i) => s + (i.est_minutes || 0), 0) ?? 0;
+    const skip = (t: string) => {
+      const l = t.toLowerCase();
+      return l.startsWith('buffer') || l === 'lunch break' || l.includes('victory hour') || l.startsWith('school pickup') || l.includes('wind down') || l.includes('morning routine');
+    };
+    return planItems?.filter((i) => !i.is_calendar_event && !skip(i.title)).reduce((s, i) => s + (i.est_minutes || 0), 0) ?? 0;
   }, [planItems]);
 
   const totalH = Math.floor(totalPlannedMinutes / 60);
