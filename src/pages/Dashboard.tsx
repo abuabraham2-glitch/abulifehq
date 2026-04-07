@@ -336,6 +336,9 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Rules & Preferences */}
+          <PreferencesSection />
         </>
       )}
 
