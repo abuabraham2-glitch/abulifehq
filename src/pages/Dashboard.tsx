@@ -73,7 +73,11 @@ export default function Dashboard() {
   }, [planItems]);
 
   const winsEligibleItems = useMemo(() => {
-    return planItems?.filter((i) => !i.is_calendar_event) ?? [];
+    const skip = (t: string) => {
+      const l = t.toLowerCase();
+      return l.startsWith('buffer') || l === 'lunch break' || l.includes('victory hour') || l.startsWith('school pickup') || l.includes('wind down') || l.includes('morning routine');
+    };
+    return planItems?.filter((i) => !i.is_calendar_event && !skip(i.title)) ?? [];
   }, [planItems]);
 
   const completedItems = useMemo(() => {
