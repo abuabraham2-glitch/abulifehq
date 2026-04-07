@@ -10,7 +10,7 @@ export function ReprioritizeSection() {
 
   // Filter to pending real tasks
   const pendingTasks = (items ?? [])
-    .filter((i) => !i.is_calendar_event && i.task_id != null && i.status !== 'completed' && i.status !== 'skipped')
+    .filter((i) => !i.is_calendar_event && i.status !== 'completed' && i.status !== 'skipped')
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
   const [order, setOrder] = useState<string[] | null>(null);
