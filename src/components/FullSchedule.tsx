@@ -63,6 +63,11 @@ export function FullSchedule() {
     if (doneItem.task_id) {
       await completeTask.mutateAsync(doneItem.task_id);
     }
+    fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_item_id: doneItem.id, calendar_event_id: doneItem.calendar_event_id }),
+    }).catch(() => {});
     setDoneItem(null);
   };
 
