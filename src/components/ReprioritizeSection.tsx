@@ -8,9 +8,13 @@ export function ReprioritizeSection() {
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Filter to pending real tasks
+  // Filter to pending real tasks (exclude AI filler blocks)
+  const skipTitle = (t: string) => {
+    const l = t.toLowerCase();
+    return l.startsWith('buffer') || l === 'lunch break' || l.includes('victory hour') || l.startsWith('school pickup') || l.includes('wind down') || l.includes('morning routine');
+  };
   const pendingTasks = (items ?? [])
-    .filter((i) => !i.is_calendar_event && i.task_id != null && i.status !== 'completed' && i.status !== 'skipped')
+    .filter((i) => !i.is_calendar_event && !skipTitle(i.title) && i.status !== 'completed' && i.status !== 'skipped')
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
   const [order, setOrder] = useState<string[] | null>(null);
