@@ -1,14 +1,64 @@
-import { useState, useCallback } from 'react';
-import { ArrowUpDown, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowUpDown, ChevronDown, ChevronUp, GripVertical, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useTodayPlanItems, type PlanItem } from '@/hooks/useDailyPlan';
+
+function SortableRow({ item, index }: { item: PlanItem; index: number }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    backgroundColor: 'hsl(var(--secondary))',
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 rounded-lg p-2.5 min-h-[44px]"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="touch-none p-1 rounded text-muted-foreground hover:text-foreground flex-shrink-0 cursor-grab active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+      <span className="text-[13px] font-semibold text-muted-foreground w-5 text-center flex-shrink-0">
+        {index + 1}
+      </span>
+      <span className="flex-1 text-[14px] text-foreground truncate">{item.title}</span>
+    </div>
+  );
+}
 
 export function ReprioritizeSection() {
   const { data: items } = useTodayPlanItems();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
 
-  // Filter to pending real tasks (exclude AI filler blocks)
   const skipTitle = (t: string) => {
     const l = t.toLowerCase();
     return l.startsWith('buffer') || l === 'lunch break' || l.includes('victory hour') || l.startsWith('school pickup') || l.includes('wind down') || l.includes('morning routine');
@@ -19,7 +69,6 @@ export function ReprioritizeSection() {
 
   const [order, setOrder] = useState<string[] | null>(null);
 
-  // Sync order when opening
   const toggle = () => {
     if (!open) {
       setOrder(pendingTasks.map((t) => t.id));
@@ -31,13 +80,18 @@ export function ReprioritizeSection() {
     ? order.map((id) => pendingTasks.find((t) => t.id === id)).filter(Boolean) as PlanItem[]
     : pendingTasks;
 
-  const move = (idx: number, dir: -1 | 1) => {
-    if (!order) return;
-    const newIdx = idx + dir;
-    if (newIdx < 0 || newIdx >= order.length) return;
-    const next = [...order];
-    [next[idx], next[newIdx]] = [next[newIdx], next[idx]];
-    setOrder(next);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !order) return;
+    const oldIndex = order.indexOf(active.id as string);
+    const newIndex = order.indexOf(over.id as string);
+    setOrder(arrayMove(order, oldIndex, newIndex));
   };
 
   const handleReschedule = async () => {
@@ -80,34 +134,13 @@ export function ReprioritizeSection() {
 
       {open && (
         <div className="px-4 pb-4 space-y-2">
-          {orderedTasks.map((item, idx) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 rounded-lg p-2.5 min-h-[44px]"
-              style={{ backgroundColor: 'hsl(var(--secondary))' }}
-            >
-              <span className="text-[13px] font-semibold text-muted-foreground w-5 text-center flex-shrink-0">
-                {idx + 1}
-              </span>
-              <span className="flex-1 text-[14px] text-foreground truncate">{item.title}</span>
-              <div className="flex flex-col gap-0.5 flex-shrink-0">
-                <button
-                  onClick={() => move(idx, -1)}
-                  disabled={idx === 0}
-                  className="p-1 rounded hover:bg-accent disabled:opacity-30"
-                >
-                  <ChevronUp size={14} className="text-muted-foreground" />
-                </button>
-                <button
-                  onClick={() => move(idx, 1)}
-                  disabled={idx === orderedTasks.length - 1}
-                  className="p-1 rounded hover:bg-accent disabled:opacity-30"
-                >
-                  <ChevronDown size={14} className="text-muted-foreground" />
-                </button>
-              </div>
-            </div>
-          ))}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={orderedTasks.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              {orderedTasks.map((item, idx) => (
+                <SortableRow key={item.id} item={item} index={idx} />
+              ))}
+            </SortableContext>
+          </DndContext>
 
           <button
             onClick={handleReschedule}
