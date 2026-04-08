@@ -317,7 +317,7 @@ export default function Dashboard() {
           <FullSchedule />
 
           {/* Today's Wins */}
-          <div className="rounded-[14px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '0.5px solid rgba(0,0,0,0.04)' }}>
+          <div className="rounded-[8px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '1.5px solid #5C3D1E' }}>
             <div className="flex items-center justify-between mb-3">
               <p className="text-[13px] font-medium wins-label">Today's wins</p>
               <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
