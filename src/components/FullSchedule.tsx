@@ -16,6 +16,17 @@ export function FullSchedule() {
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
   const completeTask = useCompleteTask();
+  const queryClient = useQueryClient();
+
+  const handleRemove = async (item: PlanItem) => {
+    await supabase.from('plan_items').delete().eq('id', item.id);
+    fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+  };
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
