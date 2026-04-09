@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { usePlanItemsByDate, useUpdatePlanItem, todayStr, yesterdayStr, type PlanItem } from '@/hooks/useDailyPlan';
+import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,9 +12,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { FocusTimer } from '@/components/FocusTimer';
 import { SkipReasonModal } from '@/components/SkipReasonModal';
 
-export function TodaysSchedule() {
-  const [viewYesterday, setViewYesterday] = useState(false);
-  const dateString = viewYesterday ? yesterdayStr() : todayStr();
+interface Props {
+  viewTomorrow: boolean;
+  onToggleTab: () => void;
+}
+
+export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
+  const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
   const completeTask = useCompleteTask();
@@ -34,32 +38,30 @@ export function TodaysSchedule() {
     return `${h}:${m}:00`;
   }, []);
 
-  // Sort items by start_time
   const sortedItems = useMemo(() => {
     return [...(planItems ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time));
   }, [planItems]);
 
-  // Find the "active" item: first pending item with start_time >= now, or first pending if all past
   const activeItemId = useMemo(() => {
-    if (viewYesterday) return null;
+    if (viewTomorrow) return null;
     const pending = sortedItems.filter((i) => i.status !== 'completed' && i.status !== 'skipped');
     if (pending.length === 0) return null;
     const upcoming = pending.find((i) => i.start_time >= nowTime);
     return upcoming?.id ?? pending[0]?.id ?? null;
-  }, [sortedItems, nowTime, viewYesterday]);
+  }, [sortedItems, nowTime, viewTomorrow]);
 
   const activeItem = useMemo(() => sortedItems.find((i) => i.id === activeItemId) ?? null, [sortedItems, activeItemId]);
   const activeIsOverdue = useMemo(() => {
-    if (!activeItem || viewYesterday) return false;
+    if (!activeItem || viewTomorrow) return false;
     return activeItem.start_time < nowTime;
-  }, [activeItem, nowTime, viewYesterday]);
+  }, [activeItem, nowTime, viewTomorrow]);
 
   const pastPendingItems = useMemo(() => {
-    if (viewYesterday) return [];
+    if (viewTomorrow) return [];
     return sortedItems.filter(
       (i) => i.status !== 'completed' && i.status !== 'skipped' && i.end_time < nowTime
     );
-  }, [sortedItems, nowTime, viewYesterday]);
+  }, [sortedItems, nowTime, viewTomorrow]);
 
   const handleRemove = async (item: PlanItem) => {
     await supabase.from('plan_items').delete().eq('id', item.id);
@@ -142,36 +144,66 @@ export function TodaysSchedule() {
     }
   };
 
-  const isOverdue = (item: PlanItem) => !viewYesterday && item.end_time < nowTime;
+  const isOverdue = (item: PlanItem) => !viewTomorrow && item.end_time < nowTime;
 
   if (isLoading) return null;
-  if (!sortedItems.length) {
-    if (viewYesterday) {
-      return (
-        <div>
-          <Header viewYesterday={viewYesterday} onToggle={() => setViewYesterday(!viewYesterday)} />
-          <p className="text-[13px] text-muted-foreground text-center py-4">No plan found for yesterday.</p>
+
+  // Tomorrow with no plan
+  if (viewTomorrow && !sortedItems.length) {
+    return (
+      <div>
+        <Header viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
+        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
+          <p className="text-[14px] text-muted-foreground">Tomorrow's plan hasn't been generated yet.</p>
+          <p className="text-[13px] text-muted-foreground mt-1">It will arrive at 9pm tonight.</p>
         </div>
-      );
-    }
-    return null;
+      </div>
+    );
   }
+
+  if (!sortedItems.length) return null;
 
   return (
     <div>
       <Header
-        viewYesterday={viewYesterday}
-        onToggle={() => setViewYesterday(!viewYesterday)}
-        showBulkSkip={pastPendingItems.length > 0}
+        viewTomorrow={viewTomorrow}
+        onToggle={onToggleTab}
+        showBulkSkip={!viewTomorrow && pastPendingItems.length > 0}
         onBulkSkip={() => setBulkSkipOpen(true)}
       />
       <div className="space-y-2">
         {sortedItems.map((item) => {
-          const isActive = item.id === activeItemId;
+          const isActive = !viewTomorrow && item.id === activeItemId;
           const isCompleted = item.status === 'completed';
           const isSkipped = item.status === 'skipped';
           const isPending = !isCompleted && !isSkipped;
-          const overdue = isPending && (viewYesterday || isOverdue(item));
+          const overdue = isPending && !viewTomorrow && isOverdue(item);
+
+          // Tomorrow: read-only rows
+          if (viewTomorrow) {
+            return (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 rounded-[14px] p-3.5 min-h-[52px]"
+                style={{ backgroundColor: 'hsl(var(--card))', border: '0.5px solid rgba(0,0,0,0.04)' }}
+              >
+                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(item.category) }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] md:text-[13px]" style={{ color: 'hsl(var(--foreground))' }}>
+                    {item.title}
+                  </p>
+                  <p className="text-[12px] text-muted-foreground">
+                    {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
+                  </p>
+                </div>
+                <span className="text-[12px] font-medium flex-shrink-0" style={{ color: getCategoryColor(item.category) }}>
+                  {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
+                </span>
+              </div>
+            );
+          }
 
           if (isActive) {
             return (
@@ -403,11 +435,11 @@ export function TodaysSchedule() {
   );
 }
 
-function Header({ viewYesterday, onToggle, showBulkSkip, onBulkSkip }: { viewYesterday: boolean; onToggle: () => void; showBulkSkip?: boolean; onBulkSkip?: () => void }) {
+function Header({ viewTomorrow, onToggle, showBulkSkip, onBulkSkip }: { viewTomorrow: boolean; onToggle: () => void; showBulkSkip?: boolean; onBulkSkip?: () => void }) {
   return (
     <div className="flex items-center justify-between mb-3">
       <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider">
-        {viewYesterday ? "YESTERDAY'S SCHEDULE" : "TODAY'S SCHEDULE"}
+        {viewTomorrow ? "TOMORROW'S SCHEDULE" : "TODAY'S SCHEDULE"}
       </p>
       <div className="flex items-center gap-3">
         {showBulkSkip && (
@@ -420,11 +452,11 @@ function Header({ viewYesterday, onToggle, showBulkSkip, onBulkSkip }: { viewYes
         )}
         <div className="flex gap-1.5">
           <button
-            onClick={viewYesterday ? onToggle : undefined}
+            onClick={viewTomorrow ? onToggle : undefined}
             className="flex items-center gap-1.5 text-[14px] font-bold rounded-full px-4 py-2 transition-colors"
             style={{
-              backgroundColor: !viewYesterday ? '#B8906C' : '#E8E0D4',
-              color: !viewYesterday ? '#fff' : '#3D3225',
+              backgroundColor: !viewTomorrow ? '#B8906C' : '#E8E0D4',
+              color: !viewTomorrow ? '#fff' : '#3D3225',
               border: '1.5px solid #B8906C',
             }}
           >
@@ -432,16 +464,16 @@ function Header({ viewYesterday, onToggle, showBulkSkip, onBulkSkip }: { viewYes
             Today
           </button>
           <button
-            onClick={!viewYesterday ? onToggle : undefined}
+            onClick={!viewTomorrow ? onToggle : undefined}
             className="flex items-center gap-1.5 text-[14px] font-bold rounded-full px-4 py-2 transition-colors"
             style={{
-              backgroundColor: viewYesterday ? '#B8906C' : '#E8E0D4',
-              color: viewYesterday ? '#fff' : '#3D3225',
+              backgroundColor: viewTomorrow ? '#B8906C' : '#E8E0D4',
+              color: viewTomorrow ? '#fff' : '#3D3225',
               border: '1.5px solid #B8906C',
             }}
           >
             <Clock size={13} />
-            Yesterday
+            Tomorrow
           </button>
         </div>
       </div>

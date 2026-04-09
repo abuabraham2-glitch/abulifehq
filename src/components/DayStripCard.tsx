@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { useTodayPlanItems } from '@/hooks/useDailyPlan';
+import { useTodayPlanItems, usePlanItemsByDate, tomorrowStr } from '@/hooks/useDailyPlan';
 
 function todayPacific() {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
@@ -10,13 +10,20 @@ function todayPacific() {
   return `${y}-${m}-${day}`;
 }
 
-export function DayStripCard() {
+interface Props {
+  viewTomorrow?: boolean;
+}
+
+export function DayStripCard({ viewTomorrow = false }: Props) {
   const today = todayPacific();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem('daystrip_dismissed_date') === today;
   });
 
-  const { data: items } = useTodayPlanItems();
+  const { data: todayItems } = useTodayPlanItems();
+  const { data: tomorrowItems } = usePlanItemsByDate(tomorrowStr());
+
+  const items = viewTomorrow ? tomorrowItems : todayItems;
 
   const taskItems = useMemo(() => {
     const skip = (t: string) => {
@@ -49,35 +56,33 @@ export function DayStripCard() {
     setDismissed(true);
   };
 
+  const label = viewTomorrow ? 'Tasks tomorrow' : 'Tasks today';
+
   return (
     <div
       className="relative rounded-[14px] bg-card p-4 flex items-center"
       style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
     >
       <div className="flex flex-1 items-center">
-        {/* Left stat */}
         <div className="flex-1 text-center">
           <p className="text-[20px] font-semibold text-foreground">{taskCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Tasks today</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
         </div>
-
-        {/* Divider */}
         <div className="w-px h-10 bg-border" />
-
-        {/* Right stat */}
         <div className="flex-1 text-center">
           <p className="text-[20px] font-semibold text-foreground">{timeLabel}</p>
           <p className="text-[11px] text-muted-foreground mt-0.5">Work planned</p>
         </div>
       </div>
 
-      {/* Dismiss */}
-      <button
-        onClick={handleDismiss}
-        className="absolute top-2.5 right-2.5 p-1 rounded-full text-muted-foreground hover:text-foreground"
-      >
-        <X size={14} />
-      </button>
+      {!viewTomorrow && (
+        <button
+          onClick={handleDismiss}
+          className="absolute top-2.5 right-2.5 p-1 rounded-full text-muted-foreground hover:text-foreground"
+        >
+          <X size={14} />
+        </button>
+      )}
     </div>
   );
 }

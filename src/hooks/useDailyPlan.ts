@@ -16,6 +16,12 @@ export function yesterdayStr() {
   return dateStr(d);
 }
 
+export function tomorrowStr() {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  d.setDate(d.getDate() + 1);
+  return dateStr(d);
+}
+
 function dateStr(d: Date) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
