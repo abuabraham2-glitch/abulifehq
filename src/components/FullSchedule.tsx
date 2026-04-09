@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePlanItemsByDate, useUpdatePlanItem, todayStr, yesterdayStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function FullSchedule() {
   const [viewYesterday, setViewYesterday] = useState(false);
@@ -14,6 +16,17 @@ export function FullSchedule() {
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
   const completeTask = useCompleteTask();
+  const queryClient = useQueryClient();
+
+  const handleRemove = async (item: PlanItem) => {
+    await supabase.from('plan_items').delete().eq('id', item.id);
+    fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+  };
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
@@ -216,6 +229,15 @@ export function FullSchedule() {
                     className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0 flex items-center gap-1 bg-secondary text-muted-foreground"
                   >
                     <RotateCcw size={11} /> Undo
+                  </button>
+                )}
+                {!item.is_calendar_event && (
+                  <button
+                    onClick={() => handleRemove(item)}
+                    className="p-1 rounded-full hover:bg-secondary transition-colors"
+                    aria-label="Remove item"
+                  >
+                    <X size={14} style={{ color: '#94a3b8' }} />
                   </button>
                 )}
               </div>

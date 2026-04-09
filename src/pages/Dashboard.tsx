@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, ChevronRight, Check } from 'lucide-react';
+import { Inbox, ChevronRight, Check, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,17 @@ export default function Dashboard() {
   const { data: triageCount = 0 } = useTriageCount();
   const completeTask = useCompleteTask();
   const updatePlanItem = useUpdatePlanItem();
+  const queryClient = useQueryClient();
+
+  const handleRemoveItem = async (item: PlanItem) => {
+    await supabase.from('plan_items').delete().eq('id', item.id);
+    fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+  };
 
   const [phrase] = useState(getRandomPhrase);
 
@@ -307,6 +320,15 @@ export default function Dashboard() {
                     <span className="text-[13px] md:text-[15px] font-medium flex-shrink-0 whitespace-nowrap" style={{ color: getCategoryColor(item.category) }}>
                       {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
                     </span>
+                    {!item.is_calendar_event && (
+                      <button
+                        onClick={() => handleRemoveItem(item)}
+                        className="p-1 rounded-full hover:bg-secondary transition-colors flex-shrink-0"
+                        aria-label="Remove item"
+                      >
+                        <X size={14} style={{ color: '#94a3b8' }} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
