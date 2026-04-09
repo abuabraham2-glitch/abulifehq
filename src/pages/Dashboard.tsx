@@ -20,6 +20,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [viewTomorrow, setViewTomorrow] = useState(false);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -119,55 +120,57 @@ export default function Dashboard() {
       {!loading && hasPlan && (
         <>
           {/* Day Strip */}
-          <DayStripCard />
+          <DayStripCard viewTomorrow={viewTomorrow} />
 
-          {/* Calendar events banner */}
+          {/* Calendar events banner — always today */}
           <CalendarBanner />
 
           {/* Pattern insight */}
           <PatternInsightCard />
 
           {/* Chat input for plan revisions */}
-          <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} />
+          <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
 
-          {/* Re-prioritize */}
-          <ReprioritizeSection />
+          {/* Re-prioritize — only on Today */}
+          {!viewTomorrow && <ReprioritizeSection />}
 
-          {/* Unified Today's Schedule */}
-          <TodaysSchedule />
+          {/* Unified Schedule */}
+          <TodaysSchedule viewTomorrow={viewTomorrow} onToggleTab={() => setViewTomorrow(!viewTomorrow)} />
 
-          {/* Today's Wins */}
-          <div className="rounded-[8px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '1.5px solid #5C3D1E' }}>
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-[13px] font-medium wins-label">Today's wins</p>
-              <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
-                {completedItems.length}/{winsEligibleItems.length}
-              </p>
-            </div>
-            <div className="flex gap-1 mb-3">
-              {winsEligibleItems.map((item, i) => (
-                <div
-                  key={item.id}
-                  className="h-1 flex-1 rounded-sm"
-                  style={{ backgroundColor: i < completedItems.length ? '#B8906C' : 'hsl(var(--border))' }}
-                />
-              ))}
-            </div>
-            {completedItems.length === 0 ? (
-              <p className="text-[13px] wins-text">No wins yet — let's go!</p>
-            ) : (
-              <div className="space-y-2">
-                {completedItems.map((item) => (
-                  <div key={item.id} className="flex items-center gap-2 min-h-[44px]">
-                    <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#059669' }}>
-                      <Check size={10} className="text-white" />
-                    </div>
-                    <span className="text-[13px] truncate wins-text">{item.title}</span>
-                  </div>
+          {/* Today's Wins — only on Today */}
+          {!viewTomorrow && (
+            <div className="rounded-[8px] p-4" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '1.5px solid #5C3D1E' }}>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[13px] font-medium wins-label">Today's wins</p>
+                <p className="text-[13px] font-medium wins-label" style={{ color: '#B8906C' }}>
+                  {completedItems.length}/{winsEligibleItems.length}
+                </p>
+              </div>
+              <div className="flex gap-1 mb-3">
+                {winsEligibleItems.map((item, i) => (
+                  <div
+                    key={item.id}
+                    className="h-1 flex-1 rounded-sm"
+                    style={{ backgroundColor: i < completedItems.length ? '#B8906C' : 'hsl(var(--border))' }}
+                  />
                 ))}
               </div>
-            )}
-          </div>
+              {completedItems.length === 0 ? (
+                <p className="text-[13px] wins-text">No wins yet — let's go!</p>
+              ) : (
+                <div className="space-y-2">
+                  {completedItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2 min-h-[44px]">
+                      <div className="w-[18px] h-[18px] rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#059669' }}>
+                        <Check size={10} className="text-white" />
+                      </div>
+                      <span className="text-[13px] truncate wins-text">{item.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Rules & Preferences */}
           <PreferencesSection />

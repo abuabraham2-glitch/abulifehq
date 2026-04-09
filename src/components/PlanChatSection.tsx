@@ -12,9 +12,10 @@ interface ChatMessage {
 interface Props {
   planId: string | null;
   planItems?: PlanItem[];
+  viewTomorrow?: boolean;
 }
 
-export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) {
+export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomorrow = false }: Props) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,17 +30,20 @@ export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) 
     const text = input.trim();
     if (!text || loading) return;
 
+    // Prepend "tomorrow: " when viewing tomorrow's tab
+    const messageToSend = viewTomorrow ? `tomorrow: ${text}` : text;
+
     setMessages((prev) => [...prev, { role: 'user', text }]);
     setInput('');
     setLoading(true);
 
     try {
-      const targetDate = 'today';
+      const targetDate = viewTomorrow ? 'tomorrow' : 'today';
       const res = await fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-revision', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: text,
+          message: messageToSend,
           target_date: targetDate,
           planId,
           currentItems: (currentPlanItems ?? []).map((item) => ({
@@ -63,7 +67,6 @@ export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) 
       try {
         data = JSON.parse(rawText);
       } catch {
-        // Try extracting JSON from potential markdown wrapper
         const jsonStart = rawText.search(/[\{\[]/);
         const jsonEnd = rawText.lastIndexOf(jsonStart !== -1 && rawText[jsonStart] === '[' ? ']' : '}');
         if (jsonStart !== -1 && jsonEnd !== -1) {
@@ -77,7 +80,6 @@ export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) 
       const msg = data.message || 'Done.';
 
       if (data.action === 'revision') {
-        // Safeguard: validate the response before accepting
         if (!data || (typeof data !== 'object') || msg === '') {
           setMessages((prev) => [...prev, { role: 'ai', text: 'Something went wrong, your plan was not changed.' }]);
           toast({ title: 'Something went wrong, your plan was not changed.', variant: 'destructive' });
@@ -108,7 +110,6 @@ export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) 
 
   return (
     <div className="space-y-3">
-      {/* Chat history */}
       {messages.length > 0 && (
         <div className="space-y-2 max-h-[240px] overflow-y-auto px-1">
           {messages.map((msg, i) => (
@@ -129,13 +130,12 @@ export function PlanChatSection({ planId, planItems: currentPlanItems }: Props) 
         </div>
       )}
 
-      {/* Input row */}
       <div className="flex items-center gap-2 rounded-full p-1.5" style={{ backgroundColor: '#fff', border: '1px solid #D4C5B0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Change your plan..."
+          placeholder={viewTomorrow ? "Change tomorrow's plan..." : "Change your plan..."}
           disabled={loading}
           className="plan-chat-input flex-1 rounded-full px-3.5 py-2 text-[16px] bg-transparent min-h-[40px] focus:outline-none border-none outline-none"
           style={{ color: 'hsl(var(--foreground))', caretColor: '#B8906C' }}
