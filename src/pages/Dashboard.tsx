@@ -41,6 +41,17 @@ export default function Dashboard() {
   const { data: triageCount = 0 } = useTriageCount();
   const completeTask = useCompleteTask();
   const updatePlanItem = useUpdatePlanItem();
+  const queryClient = useQueryClient();
+
+  const handleRemoveItem = async (item: PlanItem) => {
+    await supabase.from('plan_items').delete().eq('id', item.id);
+    fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
+    }).catch(() => {});
+    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+  };
 
   const [phrase] = useState(getRandomPhrase);
 
