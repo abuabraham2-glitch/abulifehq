@@ -7,6 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { usePlanItemsByDate, useUpdatePlanItem, todayStr, yesterdayStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 export function FullSchedule() {
   const [viewYesterday, setViewYesterday] = useState(false);
