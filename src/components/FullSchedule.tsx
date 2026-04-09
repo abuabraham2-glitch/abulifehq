@@ -231,6 +231,15 @@ export function FullSchedule() {
                     <RotateCcw size={11} /> Undo
                   </button>
                 )}
+                {!item.is_calendar_event && (
+                  <button
+                    onClick={() => handleRemove(item)}
+                    className="p-1 rounded-full hover:bg-secondary transition-colors"
+                    aria-label="Remove item"
+                  >
+                    <X size={14} style={{ color: '#94a3b8' }} />
+                  </button>
+                )}
               </div>
             </div>
           );

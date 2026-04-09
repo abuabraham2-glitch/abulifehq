@@ -320,6 +320,15 @@ export default function Dashboard() {
                     <span className="text-[13px] md:text-[15px] font-medium flex-shrink-0 whitespace-nowrap" style={{ color: getCategoryColor(item.category) }}>
                       {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
                     </span>
+                    {!item.is_calendar_event && (
+                      <button
+                        onClick={() => handleRemoveItem(item)}
+                        className="p-1 rounded-full hover:bg-secondary transition-colors flex-shrink-0"
+                        aria-label="Remove item"
+                      >
+                        <X size={14} style={{ color: '#94a3b8' }} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
