@@ -1,13 +1,9 @@
 import { useMemo } from 'react';
 import { useTodayPlanItems } from '@/hooks/useDailyPlan';
 import { formatTime12h } from '@/lib/constants';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { X } from 'lucide-react';
 
 export function CalendarBanner() {
   const { data: items } = useTodayPlanItems();
-  const queryClient = useQueryClient();
 
   const calEvents = useMemo(
     () =>
@@ -16,11 +12,6 @@ export function CalendarBanner() {
         .sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [items],
   );
-
-  const handleDelete = async (id: string) => {
-    await supabase.from('plan_items').delete().eq('id', id);
-    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
-  };
 
   if (calEvents.length === 0) return null;
 
@@ -42,13 +33,6 @@ export function CalendarBanner() {
               {formatTime12h(ev.start_time)}
             </span>
             <span className="text-[13px] text-foreground truncate flex-1">{ev.title}</span>
-            <button
-              onClick={() => handleDelete(ev.id)}
-              className="flex-shrink-0 p-1 rounded-full hover:bg-blue-100 transition-colors"
-              aria-label="Remove event"
-            >
-              <X size={14} style={{ color: '#94a3b8' }} />
-            </button>
           </div>
         ))}
       </div>
