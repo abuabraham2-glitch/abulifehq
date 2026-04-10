@@ -118,7 +118,7 @@ export function ReprioritizeSection() {
   if (pendingTasks.length === 0) return null;
 
   return (
-    <div className="rounded-[10px] bg-card" style={{ border: '1px solid hsl(var(--border))' }}>
+    <div className="rounded-[8px] bg-card" style={{ border: '1.5px solid #5C3D1E' }}>
       <button
         onClick={toggle}
         className="w-full flex items-center gap-3 p-4 min-h-[48px]"

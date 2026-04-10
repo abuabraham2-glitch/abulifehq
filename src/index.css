@@ -4,82 +4,64 @@
 
 @layer base {
   :root {
-    /* Sage-tinted ADHD-optimized palette */
-    --background: 140 18% 95%;
-    --foreground: 156 29% 23%;
+    --background: 37 33% 93%;
+    --foreground: 36 6% 15%;
     --card: 0 0% 100%;
-    --card-foreground: 156 29% 23%;
+    --card-foreground: 36 6% 15%;
     --popover: 0 0% 100%;
-    --popover-foreground: 156 29% 23%;
-    --primary: 37 76% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 144 18% 90%;
-    --secondary-foreground: 156 29% 23%;
-    --muted: 144 14% 90%;
-    --muted-foreground: 152 14% 51%;
-    --accent: 37 76% 60%;
+    --popover-foreground: 36 6% 15%;
+    --primary: 27 30% 57%;
+    --primary-foreground: 37 33% 96%;
+    --secondary: 37 20% 90%;
+    --secondary-foreground: 36 6% 20%;
+    --muted: 37 15% 90%;
+    --muted-foreground: 33 8% 50%;
+    --accent: 27 30% 57%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 140 14% 86%;
-    --input: 140 14% 86%;
-    --ring: 37 76% 60%;
+    --border: 33 12% 87%;
+    --input: 33 12% 87%;
+    --ring: 27 30% 57%;
     --radius: 0.875rem;
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 156 29% 23%;
-    --sidebar-primary: 37 76% 60%;
+    --sidebar-foreground: 36 6% 15%;
+    --sidebar-primary: 27 30% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 144 18% 95%;
-    --sidebar-accent-foreground: 156 29% 23%;
-    --sidebar-border: 140 14% 86%;
-    --sidebar-ring: 37 76% 60%;
-
-    /* Semantic tokens */
-    --sage-success: 152 31% 52%;
-    --sage-amber: 37 76% 60%;
-    --sage-muted-text: 152 14% 51%;
-    --sage-border: 140 14% 86%;
-    --sage-progress-remaining: 144 16% 84%;
-    --calendar-bg: 216 60% 95%;
-    --calendar-text: 210 30% 40%;
+    --sidebar-accent: 37 20% 95%;
+    --sidebar-accent-foreground: 36 6% 15%;
+    --sidebar-border: 33 12% 87%;
+    --sidebar-ring: 27 30% 57%;
   }
 
   .dark {
-    --background: 150 8% 9%;
-    --foreground: 140 17% 90%;
-    --card: 150 5% 13%;
-    --card-foreground: 140 17% 90%;
-    --popover: 150 5% 13%;
-    --popover-foreground: 140 17% 90%;
-    --primary: 37 76% 60%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 150 5% 18%;
-    --secondary-foreground: 140 17% 85%;
-    --muted: 150 5% 18%;
-    --muted-foreground: 140 8% 55%;
-    --accent: 37 76% 60%;
+    --background: 30 8% 9%;
+    --foreground: 36 17% 90%;
+    --card: 30 5% 13%;
+    --card-foreground: 36 17% 90%;
+    --popover: 30 5% 13%;
+    --popover-foreground: 36 17% 90%;
+    --primary: 27 30% 57%;
+    --primary-foreground: 37 33% 96%;
+    --secondary: 30 5% 18%;
+    --secondary-foreground: 36 17% 85%;
+    --muted: 30 5% 18%;
+    --muted-foreground: 33 8% 55%;
+    --accent: 27 30% 57%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 0 0% 100%;
-    --border: 150 5% 20%;
-    --input: 150 5% 20%;
-    --ring: 37 76% 60%;
-    --sidebar-background: 150 8% 7%;
-    --sidebar-foreground: 140 17% 80%;
-    --sidebar-primary: 37 76% 60%;
+    --border: 30 5% 20%;
+    --input: 30 5% 20%;
+    --ring: 27 30% 57%;
+    --sidebar-background: 30 8% 7%;
+    --sidebar-foreground: 36 17% 80%;
+    --sidebar-primary: 27 30% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 150 8% 14%;
-    --sidebar-accent-foreground: 140 17% 90%;
-    --sidebar-border: 150 8% 18%;
-    --sidebar-ring: 37 76% 60%;
-
-    --sage-success: 152 31% 42%;
-    --sage-amber: 37 76% 55%;
-    --sage-muted-text: 140 8% 55%;
-    --sage-border: 150 5% 20%;
-    --sage-progress-remaining: 150 5% 22%;
-    --calendar-bg: 216 20% 18%;
-    --calendar-text: 210 30% 65%;
+    --sidebar-accent: 30 8% 14%;
+    --sidebar-accent-foreground: 36 17% 90%;
+    --sidebar-border: 30 8% 18%;
+    --sidebar-ring: 27 30% 57%;
   }
 }
 
@@ -93,19 +75,23 @@
   }
 }
 
-/* Dark-mode readability overrides */
+/* Dark-mode readability overrides for dashboard cards with white-alpha backgrounds */
+.dark .up-next-task-name { color: #E8E4DC; }
+.dark .up-next-time { color: #FFFFFF; }
 .dark .wins-label { color: #E8E4DC; }
 .dark .wins-text { color: #E8E4DC; }
 
 /* Matrix dark mode */
-.dark .matrix-quad { background-color: #1e2420; }
+.dark .matrix-quad { background-color: #242220; }
 .dark .matrix-task-name { color: #E8E4DC; }
 .dark .matrix-minutes { color: #D0CBC2; }
 .dark .matrix-sub { color: #A8A29E; }
 
-/* Light mode defaults */
-.wins-label { color: hsl(var(--muted-foreground)); }
-.wins-text { color: hsl(var(--foreground)); }
+/* Light mode defaults for the utility classes */
+.up-next-task-name { color: #6B6560; }
+.up-next-time { color: #2C2A25; }
+.wins-label { color: #6B6560; }
+.wins-text { color: #6B6560; }
 .matrix-quad { background-color: #F9FAFB; }
 .matrix-task-name { color: hsl(var(--foreground)); }
 .matrix-minutes { color: hsl(var(--muted-foreground)); }
@@ -120,4 +106,4 @@
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.plan-chat-input::placeholder { color: hsl(var(--muted-foreground)); opacity: 1; }
+.plan-chat-input::placeholder { color: #8B7D6B; opacity: 1; }

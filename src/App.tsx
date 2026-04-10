@@ -11,7 +11,6 @@ import Matrix from "./pages/Matrix";
 import Triage from "./pages/Triage";
 import Grocery from "./pages/Grocery";
 import Notes from "./pages/Notes";
-import More from "./pages/More";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,7 +30,6 @@ const App = () => (
                 <Route path="/triage" element={<Triage />} />
                 <Route path="/grocery" element={<Grocery />} />
                 <Route path="/notes" element={<Notes />} />
-                <Route path="/more" element={<More />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>

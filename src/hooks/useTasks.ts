@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-export type Task = Tables<'tasks'> & { priority_order?: number | null };
+export type Task = Tables<'tasks'>;
 
 export function useTasks(filters?: {
   category?: string;
@@ -34,17 +34,7 @@ export function useTasks(filters?: {
       }
       const { data, error } = await query;
       if (error) throw error;
-      // Sort by priority_order if available, then created_at
-      const tasks = data as Task[];
-      if (filters?.quadrant && filters.quadrant !== 'All') {
-        tasks.sort((a, b) => {
-          const aPri = a.priority_order ?? 999999;
-          const bPri = b.priority_order ?? 999999;
-          if (aPri !== bPri) return aPri - bPri;
-          return 0; // keep DB order
-        });
-      }
-      return tasks;
+      return data as Task[];
     },
   });
 }
@@ -138,22 +128,6 @@ export function usePurgeArchivedTasks() {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['triage'] });
       qc.invalidateQueries({ queryKey: ['daily-plan'] });
-    },
-  });
-}
-
-export function useReorderTasks() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (orderedIds: string[]) => {
-      await Promise.all(
-        orderedIds.map((id, index) =>
-          supabase.from('tasks').update({ priority_order: index } as any).eq('id', id)
-        )
-      );
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowUp, Loader2 } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import type { PlanItem } from '@/hooks/useDailyPlan';
@@ -30,6 +30,7 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
     const text = input.trim();
     if (!text || loading) return;
 
+    // Prepend "tomorrow: " when viewing tomorrow's tab
     const messageToSend = viewTomorrow ? `tomorrow: ${text}` : text;
 
     setMessages((prev) => [...prev, { role: 'user', text }]);
@@ -60,6 +61,7 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
         }),
       });
       const rawText = await res.text();
+      console.log('Raw webhook response:', rawText);
 
       let data: any;
       try {
@@ -73,6 +75,7 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
           throw new Error('Could not parse response');
         }
       }
+      console.log('Parsed webhook response:', data);
 
       const msg = data.message || 'Done.';
 
@@ -115,8 +118,8 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
                 className="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed"
                 style={
                   msg.role === 'user'
-                    ? { backgroundColor: 'hsl(var(--sage-amber))', color: '#fff' }
-                    : { backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', border: '1px solid hsl(var(--border))' }
+                    ? { backgroundColor: '#B8906C', color: '#fff' }
+                    : { backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--foreground))', border: '0.5px solid rgba(0,0,0,0.06)' }
                 }
               >
                 {msg.text}
@@ -127,14 +130,7 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
         </div>
       )}
 
-      <div
-        className="flex items-center gap-2 rounded-full p-1.5"
-        style={{
-          backgroundColor: 'hsl(var(--card))',
-          border: '1px solid hsl(var(--border))',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-        }}
-      >
+      <div className="flex items-center gap-2 rounded-full p-1.5" style={{ backgroundColor: '#fff', border: '1px solid #D4C5B0', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -142,15 +138,15 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
           placeholder={viewTomorrow ? "Change tomorrow's plan..." : "Change your plan..."}
           disabled={loading}
           className="plan-chat-input flex-1 rounded-full px-3.5 py-2 text-[16px] bg-transparent min-h-[40px] focus:outline-none border-none outline-none"
-          style={{ color: 'hsl(var(--foreground))', caretColor: 'hsl(var(--sage-amber))' }}
+          style={{ color: 'hsl(var(--foreground))', caretColor: '#B8906C' }}
         />
         <button
           onClick={handleSend}
           disabled={!input.trim() || loading}
           className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 disabled:opacity-40 min-w-[44px] min-h-[44px]"
-          style={{ backgroundColor: 'hsl(var(--sage-success))', color: '#fff' }}
+          style={{ backgroundColor: '#B8906C', color: '#fff' }}
         >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowUp size={16} />}
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
     </div>
