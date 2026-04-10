@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { useTodayPlanItems, usePlanItemsByDate, tomorrowStr } from '@/hooks/useDailyPlan';
+import { useTodayPlanItems } from '@/hooks/useDailyPlan';
 
 function todayPacific() {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
@@ -10,40 +10,36 @@ function todayPacific() {
   return `${y}-${m}-${day}`;
 }
 
-interface Props {
-  viewTomorrow?: boolean;
-}
+const SKIP_TITLE = (t: string) => {
+  const l = t.toLowerCase();
+  return (
+    l.startsWith('buffer') ||
+    l === 'lunch break' ||
+    l.includes('victory hour') ||
+    l.startsWith('school pickup') ||
+    l.includes('wind down') ||
+    l.includes('morning routine')
+  );
+};
 
-export function DayStripCard({ viewTomorrow = false }: Props) {
+export function DayStripCard() {
   const today = todayPacific();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem('daystrip_dismissed_date') === today;
   });
 
-  const { data: todayItems } = useTodayPlanItems();
-  const { data: tomorrowItems } = usePlanItemsByDate(tomorrowStr());
+  const { data: items } = useTodayPlanItems();
 
-  const items = viewTomorrow ? tomorrowItems : todayItems;
-
-  const taskItems = useMemo(() => {
-    const skip = (t: string) => {
-      const l = t.toLowerCase();
-      return (
-        l.startsWith('buffer') ||
-        l === 'lunch break' ||
-        l.includes('victory hour') ||
-        l.startsWith('school pickup') ||
-        l.includes('wind down') ||
-        l.includes('morning routine')
-      );
-    };
-    return items?.filter((i) => !i.is_calendar_event && !skip(i.title)) ?? [];
+  const pendingTasks = useMemo(() => {
+    return (items ?? []).filter(
+      (i) => !i.is_calendar_event && !SKIP_TITLE(i.title) && i.status === 'pending'
+    );
   }, [items]);
 
-  const taskCount = taskItems.length;
+  const taskCount = pendingTasks.length;
   const totalMin = useMemo(
-    () => taskItems.reduce((s, i) => s + (i.est_minutes || 0), 0),
-    [taskItems],
+    () => pendingTasks.reduce((s, i) => s + (i.est_minutes || 0), 0),
+    [pendingTasks],
   );
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;
@@ -56,8 +52,6 @@ export function DayStripCard({ viewTomorrow = false }: Props) {
     setDismissed(true);
   };
 
-  const label = viewTomorrow ? 'Tasks tomorrow' : 'Tasks today';
-
   return (
     <div
       className="relative rounded-[14px] bg-card p-4 flex items-center"
@@ -66,23 +60,21 @@ export function DayStripCard({ viewTomorrow = false }: Props) {
       <div className="flex flex-1 items-center">
         <div className="flex-1 text-center">
           <p className="text-[20px] font-semibold text-foreground">{taskCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">{label}</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Tasks left</p>
         </div>
         <div className="w-px h-10 bg-border" />
         <div className="flex-1 text-center">
           <p className="text-[20px] font-semibold text-foreground">{timeLabel}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Work planned</p>
+          <p className="text-[11px] text-muted-foreground mt-0.5">Work remaining</p>
         </div>
       </div>
 
-      {!viewTomorrow && (
-        <button
-          onClick={handleDismiss}
-          className="absolute top-2.5 right-2.5 p-1 rounded-full text-muted-foreground hover:text-foreground"
-        >
-          <X size={14} />
-        </button>
-      )}
+      <button
+        onClick={handleDismiss}
+        className="absolute top-2.5 right-2.5 p-1 rounded-full text-muted-foreground hover:text-foreground"
+      >
+        <X size={14} />
+      </button>
     </div>
   );
 }

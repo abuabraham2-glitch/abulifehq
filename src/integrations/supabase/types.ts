@@ -339,6 +339,7 @@ export type Database = {
           needs_triage: boolean | null
           notes: string | null
           notion_id: string | null
+          priority_order: number | null
           quadrant: string | null
           skip_reason: string | null
           source: string | null
@@ -362,6 +363,7 @@ export type Database = {
           needs_triage?: boolean | null
           notes?: string | null
           notion_id?: string | null
+          priority_order?: number | null
           quadrant?: string | null
           skip_reason?: string | null
           source?: string | null
@@ -385,6 +387,7 @@ export type Database = {
           needs_triage?: boolean | null
           notes?: string | null
           notion_id?: string | null
+          priority_order?: number | null
           quadrant?: string | null
           skip_reason?: string | null
           source?: string | null

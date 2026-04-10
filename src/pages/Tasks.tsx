@@ -1,13 +1,31 @@
-import { useState } from 'react';
-import { Plus, Search, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Plus, Search, Trash2, GripVertical } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { useTasks, usePurgeArchivedTasks, type Task } from '@/hooks/useTasks';
+import { useTasks, usePurgeArchivedTasks, useUpdateTask, type Task } from '@/hooks/useTasks';
 import { TaskEditModal } from '@/components/TaskEditModal';
 import { AddTaskModal } from '@/components/AddTaskModal';
 import { CATEGORIES, getCategoryColor, getQuadrantColor } from '@/lib/constants';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +36,67 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+
+function SortableTaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+    border: '0.5px solid rgba(0,0,0,0.04)',
+    borderLeftWidth: '4px',
+    borderLeftColor: getCategoryColor(task.category),
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="w-full flex items-center gap-3 bg-card rounded-r-[14px] rounded-l-none p-4 md:p-5 text-left transition-colors min-h-[56px]"
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="touch-none p-1 rounded text-muted-foreground hover:text-foreground flex-shrink-0 cursor-grab active:cursor-grabbing"
+        aria-label="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+      <button onClick={onClick} className="flex-1 min-w-0 text-left">
+        <p className="text-[15px] md:text-base font-medium text-foreground">{task.name || 'Untitled task'}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          {task.category && (
+            <span
+              className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: `${getCategoryColor(task.category)}15`,
+                color: getCategoryColor(task.category),
+              }}
+            >
+              {task.category}
+            </span>
+          )}
+          {task.quadrant && (
+            <span
+              className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+              style={{
+                backgroundColor: `${getQuadrantColor(task.quadrant)}15`,
+                color: getQuadrantColor(task.quadrant),
+              }}
+            >
+              {task.quadrant}
+            </span>
+          )}
+        </div>
+      </button>
+      {task.est_minutes && (
+        <span className="text-[13px] text-muted-foreground flex-shrink-0">{task.est_minutes}m</span>
+      )}
+    </div>
+  );
+}
 
 export default function Tasks() {
   const [category, setCategory] = useState('All');
@@ -30,6 +109,39 @@ export default function Tasks() {
 
   const { data: tasks, isLoading } = useTasks({ category, quadrant, status, search });
   const purgeArchived = usePurgeArchivedTasks();
+  const updateTask = useUpdateTask();
+
+  // When viewing a specific quadrant, sort by priority_order
+  const isDraggable = quadrant !== 'All' && status === 'Active' && !search;
+
+  const sortedTasks = useMemo(() => {
+    if (!tasks) return [];
+    if (!isDraggable) return tasks;
+    return [...tasks].sort((a, b) => (a.priority_order ?? 9999) - (b.priority_order ?? 9999));
+  }, [tasks, isDraggable]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !sortedTasks.length) return;
+
+    const oldIndex = sortedTasks.findIndex((t) => t.id === active.id);
+    const newIndex = sortedTasks.findIndex((t) => t.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(sortedTasks, oldIndex, newIndex);
+    // Save priority_order for each
+    reordered.forEach((task, idx) => {
+      if (task.priority_order !== idx) {
+        updateTask.mutate({ id: task.id, priority_order: idx });
+      }
+    });
+  };
 
   const handlePurge = () => {
     purgeArchived.mutate(undefined, {
@@ -53,7 +165,6 @@ export default function Tasks() {
               Purge All
             </Button>
           )}
-          {/* Desktop add button */}
           <button
             onClick={() => setAddOpen(true)}
             className="hidden md:flex w-10 h-10 rounded-full items-center justify-center"
@@ -110,13 +221,23 @@ export default function Tasks() {
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-[72px] rounded-[14px]" />)}
         </div>
-      ) : !tasks?.length ? (
+      ) : !sortedTasks?.length ? (
         <div className="rounded-[14px] bg-card p-8 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
           <p className="text-[14px] text-muted-foreground">No tasks found</p>
         </div>
+      ) : isDraggable ? (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={sortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-2">
+              {sortedTasks.map((task) => (
+                <SortableTaskRow key={task.id} task={task} onClick={() => setEditTask(task)} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       ) : (
         <div className="space-y-2">
-          {tasks.map((task) => (
+          {sortedTasks.map((task) => (
             <button
               key={task.id}
               onClick={() => setEditTask(task)}
