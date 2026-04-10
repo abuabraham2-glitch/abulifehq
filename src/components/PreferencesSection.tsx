@@ -50,7 +50,7 @@ export function PreferencesSection() {
   };
 
   return (
-    <div className="rounded-[8px] overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.4)', border: '1.5px solid #5C3D1E' }}>
+    <div className="rounded-[10px] overflow-hidden bg-card" style={{ border: '1px solid hsl(var(--border))' }}>
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-4 min-h-[48px]"

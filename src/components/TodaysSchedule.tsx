@@ -1,16 +1,17 @@
 import { useState, useMemo } from 'react';
-import { Check, X, RotateCcw, Clock, Pencil } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask } from '@/hooks/useTasks';
-import { formatTime12h, getCategoryColor } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { FocusTimer } from '@/components/FocusTimer';
 import { SkipReasonModal } from '@/components/SkipReasonModal';
+import { FocusCard } from '@/components/FocusCard';
+import { Timeline } from '@/components/Timeline';
+import { ProgressBar } from '@/components/ProgressBar';
 
 interface Props {
   viewTomorrow: boolean;
@@ -43,7 +44,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
   }, [planItems]);
 
   const activeItemId = useMemo(() => {
-    if (viewTomorrow) return null;
+    if (viewTomorrow) {
+      // For tomorrow, first item is "FIRST UP"
+      const first = sortedItems[0];
+      return first?.id ?? null;
+    }
     const pending = sortedItems.filter((i) => i.status !== 'completed' && i.status !== 'skipped');
     if (pending.length === 0) return null;
     const upcoming = pending.find((i) => i.start_time >= nowTime);
@@ -144,16 +149,14 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
     }
   };
 
-  const isOverdue = (item: PlanItem) => !viewTomorrow && item.end_time < nowTime;
-
   if (isLoading) return null;
 
   // Tomorrow with no plan
   if (viewTomorrow && !sortedItems.length) {
     return (
-      <div>
-        <Header viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
-        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
+      <div className="space-y-4">
+        <TabToggle viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
+        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '1px solid hsl(var(--border))' }}>
           <p className="text-[14px] text-muted-foreground">Tomorrow's plan hasn't been generated yet.</p>
           <p className="text-[13px] text-muted-foreground mt-1">It will arrive at 9pm tonight.</p>
         </div>
@@ -164,194 +167,47 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
   if (!sortedItems.length) return null;
 
   return (
-    <div>
-      <Header
-        viewTomorrow={viewTomorrow}
-        onToggle={onToggleTab}
-        showBulkSkip={!viewTomorrow && pastPendingItems.length > 0}
-        onBulkSkip={() => setBulkSkipOpen(true)}
-      />
-      <div className="space-y-2">
-        {sortedItems.map((item) => {
-          const isActive = !viewTomorrow && item.id === activeItemId;
-          const isCompleted = item.status === 'completed';
-          const isSkipped = item.status === 'skipped';
-          const isPending = !isCompleted && !isSkipped;
-          const overdue = isPending && !viewTomorrow && isOverdue(item);
-
-          // Tomorrow: read-only rows
-          if (viewTomorrow) {
-            return (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 rounded-[14px] p-3.5 min-h-[52px]"
-                style={{ backgroundColor: 'hsl(var(--card))', border: '0.5px solid rgba(0,0,0,0.04)' }}
-              >
-                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(item.category) }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] md:text-[13px]" style={{ color: 'hsl(var(--foreground))' }}>
-                    {item.title}
-                  </p>
-                  <p className="text-[12px] text-muted-foreground">
-                    {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
-                  </p>
-                </div>
-                <span className="text-[12px] font-medium flex-shrink-0" style={{ color: getCategoryColor(item.category) }}>
-                  {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
-                </span>
-              </div>
-            );
-          }
-
-          if (isActive) {
-            return (
-              <div
-                key={item.id}
-                className="rounded-[14px] p-4 md:p-5"
-                style={{
-                  backgroundColor: 'hsl(var(--card))',
-                  borderLeft: '4px solid #B8906C',
-                  border: '1.5px solid #B8906C',
-                  borderLeftWidth: '4px',
-                }}
-              >
-                <div className="flex items-center gap-1.5 mb-1">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getCategoryColor(item.category) }} />
-                  <span className="text-[11px] font-medium" style={{ color: getCategoryColor(item.category) }}>
-                    {item.category || 'Buffer'}
-                  </span>
-                  {activeIsOverdue && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground ml-1">
-                      Overdue
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-[16px] md:text-lg font-medium text-foreground mb-0.5 break-words">{item.title}</h2>
-                <p className="text-[13px] text-muted-foreground mb-3">
-                  {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
-                  {!item.is_calendar_event && ` · ${item.est_minutes || 0}m`}
-                </p>
-
-                <FocusTimer />
-
-                <div className="flex gap-2 w-full">
-                  <button
-                    onClick={() => setSkipItem(item)}
-                    className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] bg-secondary text-muted-foreground"
-                  >
-                    Skip
-                  </button>
-                  <button
-                    onClick={() => openDoneDialog(item)}
-                    className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px]"
-                    style={{ backgroundColor: 'hsl(var(--foreground))', color: 'hsl(var(--background))' }}
-                  >
-                    ✓ Done
-                  </button>
-                </div>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              key={item.id}
-              className="flex items-center gap-3 rounded-[14px] p-3.5 min-h-[52px]"
-              style={{
-                backgroundColor: (isCompleted || isSkipped) ? 'hsl(var(--secondary))' : 'hsl(var(--card))',
-                border: '0.5px solid rgba(0,0,0,0.04)',
-              }}
-            >
-              <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center">
-                {isCompleted && (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: '#059669' }}>
-                    <Check size={12} className="text-white" />
-                  </div>
-                )}
-                {isSkipped && (
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center bg-muted-foreground">
-                    <X size={12} className="text-white" />
-                  </div>
-                )}
-                {isPending && (
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(item.category) }} />
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p
-                    className={`text-[14px] md:text-[13px] ${(isCompleted || isSkipped) ? 'line-through' : ''}`}
-                    style={{ color: isSkipped ? 'hsl(var(--muted-foreground))' : 'hsl(var(--foreground))' }}
-                  >
-                    {item.title}
-                  </p>
-                  {overdue && (
-                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground">
-                      Overdue
-                    </span>
-                  )}
-                </div>
-                <p className="text-[12px] text-muted-foreground">
-                  {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
-                  {isCompleted && item.actual_minutes != null && ` · ${item.actual_minutes}m actual`}
-                </p>
-              </div>
-
-              <span className="text-[12px] font-medium flex-shrink-0" style={{ color: getCategoryColor(item.category) }}>
-                {item.is_calendar_event ? 'G.Cal' : `${item.est_minutes || 0}m`}
-              </span>
-
-              <div className="flex gap-1.5 flex-shrink-0">
-                {isPending && (
-                  <>
-                    <button
-                      onClick={() => openDoneDialog(item)}
-                      className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0"
-                      style={{ backgroundColor: '#059669', color: '#fff' }}
-                    >
-                      ✓ Done
-                    </button>
-                    <button
-                      onClick={() => setSkipItem(item)}
-                      className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0 bg-secondary text-muted-foreground"
-                    >
-                      Skip
-                    </button>
-                  </>
-                )}
-                {isCompleted && (
-                  <button
-                    onClick={() => openDoneDialog(item)}
-                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0 flex items-center gap-1 bg-secondary text-muted-foreground"
-                  >
-                    <Pencil size={11} /> Edit Time
-                  </button>
-                )}
-                {isSkipped && (
-                  <button
-                    onClick={() => handleUndo(item)}
-                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium min-h-[36px] md:min-h-0 flex items-center gap-1 bg-secondary text-muted-foreground"
-                  >
-                    <RotateCcw size={11} /> Undo
-                  </button>
-                )}
-                {isPending && !item.is_calendar_event && (
-                  <button
-                    onClick={() => handleRemove(item)}
-                    className="p-1 rounded-full hover:bg-secondary transition-colors"
-                    aria-label="Remove item"
-                  >
-                    <X size={14} style={{ color: '#94a3b8' }} />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-4">
+      {/* Tab toggle + bulk skip */}
+      <div className="flex items-center justify-between">
+        <TabToggle viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
+        {!viewTomorrow && pastPendingItems.length > 0 && (
+          <button
+            onClick={() => setBulkSkipOpen(true)}
+            className="text-[12px] font-medium text-destructive"
+          >
+            Skip past events
+          </button>
+        )}
       </div>
+
+      {/* Progress bar — only today */}
+      {!viewTomorrow && (
+        <ProgressBar planItems={sortedItems} activeItemId={activeItemId} />
+      )}
+
+      {/* Focus Card */}
+      {activeItem && (
+        <FocusCard
+          item={activeItem}
+          isOverdue={activeIsOverdue}
+          isTomorrow={viewTomorrow}
+          onSkip={(item) => setSkipItem(item)}
+          onDone={openDoneDialog}
+        />
+      )}
+
+      {/* Timeline */}
+      <Timeline
+        items={sortedItems}
+        activeItemId={activeItemId}
+        nowTime={nowTime}
+        isTomorrow={viewTomorrow}
+        onRemove={handleRemove}
+        onDone={openDoneDialog}
+        onSkip={(item) => setSkipItem(item)}
+        onUndo={handleUndo}
+      />
 
       {/* Done / Edit Time dialog */}
       <Dialog open={!!doneItem} onOpenChange={(o) => !o && setDoneItem(null)}>
@@ -377,7 +233,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
               onClick={handleSaveDone}
               disabled={updatePlanItem.isPending}
               className="w-full rounded-xl"
-              style={{ backgroundColor: '#059669' }}
+              style={{ backgroundColor: 'hsl(var(--sage-success))' }}
             >
               Save
             </Button>
@@ -435,48 +291,31 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
   );
 }
 
-function Header({ viewTomorrow, onToggle, showBulkSkip, onBulkSkip }: { viewTomorrow: boolean; onToggle: () => void; showBulkSkip?: boolean; onBulkSkip?: () => void }) {
+function TabToggle({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onToggle: () => void }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <p className="text-[11px] md:text-[13px] text-muted-foreground font-medium tracking-wider">
-        {viewTomorrow ? "TOMORROW'S SCHEDULE" : "TODAY'S SCHEDULE"}
-      </p>
-      <div className="flex items-center gap-3">
-        {showBulkSkip && (
-          <button
-            onClick={onBulkSkip}
-            className="text-[12px] font-medium text-destructive"
-          >
-            Skip past events
-          </button>
-        )}
-        <div className="flex gap-1.5">
-          <button
-            onClick={viewTomorrow ? onToggle : undefined}
-            className="flex items-center gap-1.5 text-[14px] font-bold rounded-full px-4 py-2 transition-colors"
-            style={{
-              backgroundColor: !viewTomorrow ? '#B8906C' : '#E8E0D4',
-              color: !viewTomorrow ? '#fff' : '#3D3225',
-              border: '1.5px solid #B8906C',
-            }}
-          >
-            <Clock size={13} />
-            Today
-          </button>
-          <button
-            onClick={!viewTomorrow ? onToggle : undefined}
-            className="flex items-center gap-1.5 text-[14px] font-bold rounded-full px-4 py-2 transition-colors"
-            style={{
-              backgroundColor: viewTomorrow ? '#B8906C' : '#E8E0D4',
-              color: viewTomorrow ? '#fff' : '#3D3225',
-              border: '1.5px solid #B8906C',
-            }}
-          >
-            <Clock size={13} />
-            Tomorrow
-          </button>
-        </div>
-      </div>
+    <div className="flex gap-1.5">
+      <button
+        onClick={viewTomorrow ? onToggle : undefined}
+        className="flex items-center gap-1.5 text-[13px] font-semibold rounded-full px-4 py-2 transition-colors"
+        style={{
+          backgroundColor: !viewTomorrow ? 'hsl(var(--sage-amber))' : 'hsl(var(--secondary))',
+          color: !viewTomorrow ? '#fff' : 'hsl(var(--foreground))',
+        }}
+      >
+        <Clock size={13} />
+        Today
+      </button>
+      <button
+        onClick={!viewTomorrow ? onToggle : undefined}
+        className="flex items-center gap-1.5 text-[13px] font-semibold rounded-full px-4 py-2 transition-colors"
+        style={{
+          backgroundColor: viewTomorrow ? 'hsl(var(--sage-amber))' : 'hsl(var(--secondary))',
+          color: viewTomorrow ? '#fff' : 'hsl(var(--foreground))',
+        }}
+      >
+        <Clock size={13} />
+        Tomorrow
+      </button>
     </div>
   );
 }
