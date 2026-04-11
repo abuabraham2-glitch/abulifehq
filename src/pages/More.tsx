@@ -1,12 +1,45 @@
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Grid3X3, Inbox, Moon, Sun, ChevronRight } from 'lucide-react';
+import { Grid3X3, Inbox, Moon, Sun, ChevronRight, Download } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useTriageCount } from '@/hooks/useTriageQueue';
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
 
 export default function More() {
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
   const { data: triageCount = 0 } = useTriageCount();
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      deferredPrompt.current = e as BeforeInstallPromptEvent;
+      setCanInstall(true);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    const installed = () => setCanInstall(false);
+    window.addEventListener('appinstalled', installed);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installed);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt.current) return;
+    await deferredPrompt.current.prompt();
+    const { outcome } = await deferredPrompt.current.userChoice;
+    if (outcome === 'accepted') setCanInstall(false);
+    deferredPrompt.current = null;
+  };
 
   return (
     <div className="space-y-5 pb-4">
@@ -43,6 +76,21 @@ export default function More() {
           </div>
           <ChevronRight size={16} className="text-muted-foreground" />
         </button>
+
+        {/* Install App — only when prompt available */}
+        {canInstall && (
+          <button
+            onClick={handleInstall}
+            className="w-full flex items-center justify-between p-4 min-h-[52px] border-b"
+            style={{ borderColor: 'hsl(var(--border))' }}
+          >
+            <div className="flex items-center gap-3">
+              <Download size={20} className="text-muted-foreground" />
+              <span className="text-[15px] text-foreground">Install App</span>
+            </div>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </button>
+        )}
 
         {/* Dark mode toggle */}
         <button
