@@ -7,7 +7,6 @@ import { AddNoteModal } from '@/components/AddNoteModal';
 import { PlanChatSection } from '@/components/PlanChatSection';
 import { DayStripCard } from '@/components/DayStripCard';
 import { CalendarBanner } from '@/components/CalendarBanner';
-import { PatternInsightCard } from '@/components/PatternInsightCard';
 import { ReprioritizeSection } from '@/components/ReprioritizeSection';
 import { PreferencesSection } from '@/components/PreferencesSection';
 import { TodaysSchedule } from '@/components/TodaysSchedule';
@@ -89,16 +88,13 @@ export default function Dashboard() {
 
       {!loading && hasPlan && (
         <>
-          {/* Day Strip — Tasks left + Work remaining */}
-          <DayStripCard />
+          {/* Day Strip */}
+          <DayStripCard viewTomorrow={viewTomorrow} />
 
           {/* Calendar events banner — always today */}
           <CalendarBanner />
 
-          {/* Pattern insight */}
-          <PatternInsightCard />
-
-          {/* Unified Schedule (toggle + progress + focus + timeline) */}
+          {/* Toggle + Focus + Timeline */}
           <TodaysSchedule viewTomorrow={viewTomorrow} onToggleTab={() => setViewTomorrow(!viewTomorrow)} />
 
           {/* Re-prioritize — only on Today */}

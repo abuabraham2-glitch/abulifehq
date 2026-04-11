@@ -1,15 +1,16 @@
 import { useState, useMemo } from 'react';
-import { Check, X, Calendar, ChevronDown, ChevronUp, Clock } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Check, Calendar, ChevronDown, ChevronUp, CalendarDays } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarPicker } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
-import { useCompleteTask } from '@/hooks/useTasks';
+import { useCompleteTask, useUpdateTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { SkipReasonModal } from '@/components/SkipReasonModal';
 
 const SKIP_TITLE = (t: string) => {
   const l = t.toLowerCase();
@@ -23,6 +24,24 @@ const SKIP_TITLE = (t: string) => {
   );
 };
 
+function getNextMonday(weeksAhead: number = 1): string {
+  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const day = d.getDay();
+  const daysUntilMonday = ((8 - day) % 7) || 7;
+  d.setDate(d.getDate() + daysUntilMonday + (weeksAhead - 1) * 7);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function formatDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
 interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
@@ -33,12 +52,15 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
   const completeTask = useCompleteTask();
+  const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
-  const [skipItem, setSkipItem] = useState<PlanItem | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [pushItem, setPushItem] = useState<PlanItem | null>(null);
+  const [pickDateOpen, setPickDateOpen] = useState(false);
+  const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
 
   const nowTime = useMemo(() => {
     const pac = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
@@ -50,13 +72,6 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
   const sortedItems = useMemo(() => {
     return [...(planItems ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time));
   }, [planItems]);
-
-  const realTasks = useMemo(() => {
-    return sortedItems.filter((i) => !i.is_calendar_event && !SKIP_TITLE(i.title));
-  }, [sortedItems]);
-
-  const completedCount = useMemo(() => realTasks.filter((i) => i.status === 'completed').length, [realTasks]);
-  const totalCount = realTasks.length;
 
   const activeItemId = useMemo(() => {
     if (viewTomorrow) return null;
@@ -72,14 +87,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
     return activeItem.start_time < nowTime;
   }, [activeItem, nowTime, viewTomorrow]);
 
-  const handleRemove = async (item: PlanItem) => {
-    await supabase.from('plan_items').delete().eq('id', item.id);
+  const fireWebhook = (item: PlanItem) => {
     fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
     }).catch(() => {});
-    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
   };
 
   const openDoneDialog = (item: PlanItem) => {
@@ -97,33 +110,37 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
     if (doneItem.task_id) {
       await completeTask.mutateAsync(doneItem.task_id);
     }
-    fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan_item_id: doneItem.id, calendar_event_id: doneItem.calendar_event_id }),
-    }).catch(() => {});
+    fireWebhook(doneItem);
     setDoneItem(null);
   };
 
-  const handleSkip = async (item: PlanItem, reason?: string) => {
+  // Push = skip to tomorrow (same as old skip)
+  const handlePushTomorrow = async (item: PlanItem) => {
     await updatePlanItem.mutateAsync({
       id: item.id,
       status: 'skipped',
-      skip_reason: reason,
-      task_id: item.task_id,
     });
-    if (item.calendar_event_id) {
-      fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
-      }).catch(() => {});
+    fireWebhook(item);
+    setPushItem(null);
+    setExpandedId(null);
+  };
+
+  // Push = defer to a date (next week, 2 weeks, or picked date)
+  const handleDefer = async (item: PlanItem, deferDate: string) => {
+    // Update task if task_id exists
+    if (item.task_id) {
+      await updateTask.mutateAsync({ id: item.task_id, status: 'active', deferred_until: deferDate });
     }
-    setSkipItem(null);
+    // Delete the plan_item
+    await supabase.from('plan_items').delete().eq('id', item.id);
+    fireWebhook(item);
+    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    setPushItem(null);
+    setPickDateOpen(false);
+    setExpandedId(null);
   };
 
   const handleActuallyDone = (item: PlanItem) => {
-    // First revert to pending then open done dialog
     updatePlanItem.mutateAsync({ id: item.id, status: 'pending' }).then(() => {
       openDoneDialog({ ...item, status: 'pending' });
     });
@@ -135,13 +152,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
   if (viewTomorrow && !sortedItems.length) {
     return (
       <div>
-        <ToggleAndProgress
-          viewTomorrow={viewTomorrow}
-          onToggle={onToggleTab}
-          completedCount={0}
-          totalCount={0}
-          realTasks={[]}
-        />
+        <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
         <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
           <p className="text-[14px] text-muted-foreground">Tomorrow's plan hasn't been generated yet.</p>
           <p className="text-[13px] text-muted-foreground mt-1">It will arrive at 9pm tonight.</p>
@@ -152,15 +163,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
 
   if (!sortedItems.length) return null;
 
+  const quickMinutes = [15, 30, 45, 60, 90];
+
   return (
     <div>
-      <ToggleAndProgress
-        viewTomorrow={viewTomorrow}
-        onToggle={onToggleTab}
-        completedCount={completedCount}
-        totalCount={totalCount}
-        realTasks={realTasks}
-      />
+      <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
 
       {/* Focus Card — active item (today only) */}
       {!viewTomorrow && activeItem && (
@@ -202,11 +209,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
 
           <div className="flex gap-2 w-full">
             <button
-              onClick={() => setSkipItem(activeItem)}
+              onClick={() => setPushItem(activeItem)}
               className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border"
               style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
             >
-              Skip
+              Push
             </button>
             <button
               onClick={() => openDoneDialog(activeItem)}
@@ -230,12 +237,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
           const isCalendar = item.is_calendar_event;
           const isExpanded = expandedId === item.id;
 
-          // Border color
-          let borderColor = '#eee'; // future
+          let borderColor = '#eee';
           if (isActive) borderColor = '#E8A84C';
           else if (isCompleted || isSkipped) borderColor = '#ddd';
 
-          // Determine tap-to-expand eligibility (not active, not calendar, not tomorrow)
           const canExpand = !viewTomorrow && !isActive && !isCalendar;
 
           // Tomorrow: read-only
@@ -269,49 +274,33 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
                   if (canExpand) setExpandedId(isExpanded ? null : item.id);
                 }}
               >
-                {/* Dot */}
                 {isCalendar ? (
                   <Calendar size={12} className="flex-shrink-0" style={{ color: '#3B82F6' }} />
                 ) : isCompleted ? (
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#059669' }} />
                 ) : isSkipped ? (
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 bg-muted-foreground" />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#aaa' }} />
                 ) : (
                   <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
                 )}
 
-                {/* Time */}
                 <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px]" style={isCalendar ? { color: '#3B82F6' } : {}}>
                   {formatTime12h(item.start_time)}
                 </span>
 
-                {/* Title */}
                 <span
-                  className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${(isCompleted || isSkipped) ? 'line-through' : ''}`}
+                  className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${isSkipped ? 'line-through' : ''}`}
                   style={{ color: isCalendar ? '#3B82F6' : 'hsl(var(--foreground))' }}
                 >
                   {item.title}
                 </span>
 
-                {/* Checkmark for completed */}
                 {isCompleted && <Check size={13} style={{ color: '#059669' }} className="flex-shrink-0" />}
 
-                {/* Duration */}
                 {!isCalendar && (
                   <span className="text-[12px] text-muted-foreground flex-shrink-0">
                     {item.est_minutes || 0}m
                   </span>
-                )}
-
-                {/* Remove button for pending non-calendar */}
-                {isPending && !isCalendar && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleRemove(item); }}
-                    className="p-0.5 rounded-full hover:bg-secondary transition-colors flex-shrink-0"
-                    aria-label="Remove item"
-                  >
-                    <X size={13} style={{ color: '#94a3b8' }} />
-                  </button>
                 )}
               </div>
 
@@ -330,11 +319,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
                   {isPending && (
                     <div className="flex gap-2">
                       <button
-                        onClick={() => setSkipItem(item)}
+                        onClick={() => setPushItem(item)}
                         className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]"
                         style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
                       >
-                        Skip
+                        Push
                       </button>
                       <button
                         onClick={() => openDoneDialog(item)}
@@ -371,7 +360,23 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
             <DialogTitle className="text-[16px]">How long did this actually take?</DialogTitle>
           </DialogHeader>
           <div className="py-3">
-            <p className="text-[13px] text-muted-foreground mb-2">{doneItem?.title}</p>
+            <p className="text-[13px] text-muted-foreground mb-3">{doneItem?.title}</p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {quickMinutes.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setActualMinutes(m)}
+                  className="px-3 py-1.5 rounded-lg text-[13px] font-medium border min-h-[36px]"
+                  style={{
+                    borderColor: actualMinutes === m ? '#B8906C' : 'hsl(var(--border))',
+                    backgroundColor: actualMinutes === m ? '#B8906C' : 'transparent',
+                    color: actualMinutes === m ? '#fff' : 'hsl(var(--foreground))',
+                  }}
+                >
+                  {m}m
+                </button>
+              ))}
+            </div>
             <div className="flex items-center gap-2">
               <Input
                 type="number"
@@ -396,77 +401,105 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
         </DialogContent>
       </Dialog>
 
-      {/* Skip reason modal */}
-      <SkipReasonModal
-        open={!!skipItem}
-        onOpenChange={(o) => !o && setSkipItem(null)}
-        taskTitle={skipItem?.title || ''}
-        onSkipWithReason={(reason) => skipItem && handleSkip(skipItem, reason)}
-        onSkipWithoutReason={() => skipItem && handleSkip(skipItem)}
-      />
+      {/* Push picker modal */}
+      <Dialog open={!!pushItem} onOpenChange={(o) => { if (!o) { setPushItem(null); setPickDateOpen(false); } }}>
+        <DialogContent className="max-w-[320px] rounded-[18px]">
+          <DialogHeader>
+            <DialogTitle className="text-[16px]">Push this task</DialogTitle>
+          </DialogHeader>
+          <p className="text-[13px] text-muted-foreground mb-1">{pushItem?.title}</p>
+
+          {!pickDateOpen ? (
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => pushItem && handlePushTomorrow(pushItem)}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
+                style={{ borderColor: 'hsl(var(--border))' }}
+              >
+                Tomorrow
+              </button>
+              <button
+                onClick={() => pushItem && handleDefer(pushItem, getNextMonday(1))}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
+                style={{ borderColor: 'hsl(var(--border))' }}
+              >
+                Next Week
+              </button>
+              <button
+                onClick={() => pushItem && handleDefer(pushItem, getNextMonday(2))}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
+                style={{ borderColor: 'hsl(var(--border))' }}
+              >
+                2 Weeks
+              </button>
+              <button
+                onClick={() => setPickDateOpen(true)}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left flex items-center gap-2"
+                style={{ borderColor: 'hsl(var(--border))' }}
+              >
+                <CalendarDays size={16} className="text-muted-foreground" />
+                Pick a Date
+              </button>
+              <button
+                onClick={() => setPushItem(null)}
+                className="w-full text-center text-[13px] text-muted-foreground pt-1"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="pt-2">
+              <CalendarPicker
+                mode="single"
+                selected={pickedDate}
+                onSelect={(d) => {
+                  setPickedDate(d);
+                  if (d && pushItem) {
+                    handleDefer(pushItem, formatDateStr(d));
+                  }
+                }}
+                disabled={(date) => date < new Date()}
+                className={cn("p-3 pointer-events-auto")}
+              />
+              <button
+                onClick={() => setPickDateOpen(false)}
+                className="w-full text-center text-[13px] text-muted-foreground pt-2"
+              >
+                Back
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function ToggleAndProgress({
-  viewTomorrow,
-  onToggle,
-  completedCount,
-  totalCount,
-  realTasks,
-}: {
-  viewTomorrow: boolean;
-  onToggle: () => void;
-  completedCount: number;
-  totalCount: number;
-  realTasks: any[];
-}) {
+function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onToggle: () => void }) {
   return (
     <div className="mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex gap-1.5">
-          <button
-            onClick={viewTomorrow ? onToggle : undefined}
-            className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
-            style={{
-              backgroundColor: !viewTomorrow ? '#B8906C' : '#E8DDD0',
-              color: !viewTomorrow ? '#fff' : '#3D3225',
-            }}
-          >
-            Today
-          </button>
-          <button
-            onClick={!viewTomorrow ? onToggle : undefined}
-            className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
-            style={{
-              backgroundColor: viewTomorrow ? '#B8906C' : '#E8DDD0',
-              color: viewTomorrow ? '#fff' : '#3D3225',
-            }}
-          >
-            Tomorrow
-          </button>
-        </div>
-        {!viewTomorrow && totalCount > 0 && (
-          <span className="text-[13px] font-medium text-muted-foreground">
-            {completedCount} of {totalCount} done
-          </span>
-        )}
+      <div className="flex gap-1.5">
+        <button
+          onClick={viewTomorrow ? onToggle : undefined}
+          className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
+          style={{
+            backgroundColor: !viewTomorrow ? '#B8906C' : '#E8DDD0',
+            color: !viewTomorrow ? '#fff' : '#3D3225',
+          }}
+        >
+          Today
+        </button>
+        <button
+          onClick={!viewTomorrow ? onToggle : undefined}
+          className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
+          style={{
+            backgroundColor: viewTomorrow ? '#B8906C' : '#E8DDD0',
+            color: viewTomorrow ? '#fff' : '#3D3225',
+          }}
+        >
+          Tomorrow
+        </button>
       </div>
-      {/* Segmented progress bar */}
-      {!viewTomorrow && totalCount > 0 && (
-        <div className="flex gap-[3px]">
-          {realTasks.map((task, i) => (
-            <div
-              key={task.id}
-              className="flex-1 rounded-[3px]"
-              style={{
-                height: '6px',
-                backgroundColor: task.status === 'completed' ? '#B8906C' : '#E0D6C8',
-              }}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 }

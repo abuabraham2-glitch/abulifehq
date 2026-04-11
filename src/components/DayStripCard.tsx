@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
-import { useTodayPlanItems } from '@/hooks/useDailyPlan';
+import { usePlanItemsByDate, todayStr, tomorrowStr } from '@/hooks/useDailyPlan';
 
 function todayPacific() {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
@@ -22,13 +22,18 @@ const SKIP_TITLE = (t: string) => {
   );
 };
 
-export function DayStripCard() {
+interface Props {
+  viewTomorrow?: boolean;
+}
+
+export function DayStripCard({ viewTomorrow = false }: Props) {
   const today = todayPacific();
   const [dismissed, setDismissed] = useState(() => {
     return localStorage.getItem('daystrip_dismissed_date') === today;
   });
 
-  const { data: items } = useTodayPlanItems();
+  const dateString = viewTomorrow ? tomorrowStr() : todayStr();
+  const { data: items } = usePlanItemsByDate(dateString);
 
   const pendingTasks = useMemo(() => {
     return (items ?? []).filter(
