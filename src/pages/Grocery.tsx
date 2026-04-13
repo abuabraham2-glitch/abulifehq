@@ -56,6 +56,14 @@ export default function Grocery() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['grocery_items'] }),
   });
 
+  const updateQuantity = useMutation({
+    mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
+      const { error } = await supabase.from('grocery_items').update({ quantity }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['grocery_items'] }),
+  });
+
   const deleteItem = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('grocery_items').delete().eq('id', id);
