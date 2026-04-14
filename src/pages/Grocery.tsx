@@ -23,6 +23,7 @@ type GroceryItem = {
   item: string;
   section: string | null;
   checked: boolean | null;
+  quantity: number;
   created_at: string | null;
 };
 
