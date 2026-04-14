@@ -279,6 +279,21 @@ export default function Grocery() {
                           }
                           className="h-5 w-5"
                         />
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => updateQuantity.mutate({ id: item.id, quantity: Math.max(1, (item.quantity ?? 1) - 1) })}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-w-[24px] min-h-[24px] flex items-center justify-center"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="text-xs font-medium text-muted-foreground min-w-[18px] text-center">{item.quantity ?? 1}</span>
+                          <button
+                            onClick={() => updateQuantity.mutate({ id: item.id, quantity: (item.quantity ?? 1) + 1 })}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-w-[24px] min-h-[24px] flex items-center justify-center"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
                         <span
                           className={`flex-1 text-sm ${
                             item.checked ? 'line-through text-muted-foreground' : 'text-foreground'
