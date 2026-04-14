@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Camera, Trash2, Plus, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Camera, Trash2, Plus, Minus, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ type GroceryItem = {
   item: string;
   section: string | null;
   checked: boolean | null;
+  quantity: number;
   created_at: string | null;
 };
 
@@ -51,6 +52,14 @@ export default function Grocery() {
   const toggleCheck = useMutation({
     mutationFn: async ({ id, checked }: { id: string; checked: boolean }) => {
       const { error } = await supabase.from('grocery_items').update({ checked }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['grocery_items'] }),
+  });
+
+  const updateQuantity = useMutation({
+    mutationFn: async ({ id, quantity }: { id: string; quantity: number }) => {
+      const { error } = await supabase.from('grocery_items').update({ quantity }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['grocery_items'] }),
@@ -271,6 +280,21 @@ export default function Grocery() {
                           }
                           className="h-5 w-5"
                         />
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => updateQuantity.mutate({ id: item.id, quantity: Math.max(1, (item.quantity ?? 1) - 1) })}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-w-[24px] min-h-[24px] flex items-center justify-center"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="text-xs font-medium text-muted-foreground min-w-[18px] text-center">{item.quantity ?? 1}</span>
+                          <button
+                            onClick={() => updateQuantity.mutate({ id: item.id, quantity: (item.quantity ?? 1) + 1 })}
+                            className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors min-w-[24px] min-h-[24px] flex items-center justify-center"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
                         <span
                           className={`flex-1 text-sm ${
                             item.checked ? 'line-through text-muted-foreground' : 'text-foreground'
