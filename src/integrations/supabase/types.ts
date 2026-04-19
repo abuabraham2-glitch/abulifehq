@@ -108,6 +108,7 @@ export type Database = {
           item: string
           quantity: number
           section: string | null
+          store_id: string | null
         }
         Insert: {
           checked?: boolean | null
@@ -116,6 +117,7 @@ export type Database = {
           item: string
           quantity?: number
           section?: string | null
+          store_id?: string | null
         }
         Update: {
           checked?: boolean | null
@@ -124,8 +126,17 @@ export type Database = {
           item?: string
           quantity?: number
           section?: string | null
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "grocery_items_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       life_context: {
         Row: {
@@ -192,6 +203,7 @@ export type Database = {
           est_minutes: number | null
           id: string
           is_calendar_event: boolean | null
+          local_only: boolean
           plan_id: string | null
           skip_reason: string | null
           sort_order: number | null
@@ -210,6 +222,7 @@ export type Database = {
           est_minutes?: number | null
           id?: string
           is_calendar_event?: boolean | null
+          local_only?: boolean
           plan_id?: string | null
           skip_reason?: string | null
           sort_order?: number | null
@@ -228,6 +241,7 @@ export type Database = {
           est_minutes?: number | null
           id?: string
           is_calendar_event?: boolean | null
+          local_only?: boolean
           plan_id?: string | null
           skip_reason?: string | null
           sort_order?: number | null
@@ -322,6 +336,30 @@ export type Database = {
           last_generated?: string | null
           name?: string
           urgency?: string | null
+        }
+        Relationships: []
+      }
+      stores: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
         }
         Relationships: []
       }
