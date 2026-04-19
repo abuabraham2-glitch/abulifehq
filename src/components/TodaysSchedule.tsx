@@ -50,9 +50,10 @@ function formatDateStr(d: Date): string {
 interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
+  addButton?: React.ReactNode;
 }
 
-export function TodaysSchedule({ viewTomorrow, onToggleTab }: Props) {
+export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
