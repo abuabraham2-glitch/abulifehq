@@ -630,7 +630,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           opacity: (isCompleted || isSkipped) ? 0.5 : 1,
           transform: `translateX(${translateX}px)`,
           transition: startX.current !== null ? 'none' : 'transform 0.18s ease-out',
-          ...(isCalendar ? { backgroundColor: '#EEF4FF', borderRadius: '8px', borderLeft: `3px solid #93C5FD` } : {}),
+          ...(isExternal ? { backgroundColor: '#EEF4FF', borderRadius: '8px', borderLeft: `3px solid #93C5FD` } : {}),
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
