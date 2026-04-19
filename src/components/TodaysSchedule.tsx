@@ -653,7 +653,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <div className="w-[22px] flex-shrink-0" />
         )}
 
-        {isCalendar ? (
+        {isExternal ? (
           <Calendar size={12} className="flex-shrink-0" style={{ color: '#3B82F6' }} />
         ) : isCompleted ? (
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#059669' }} />
@@ -663,13 +663,13 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
         )}
 
-        <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1" style={isCalendar ? { color: '#3B82F6' } : {}}>
+        <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1" style={isExternal ? { color: '#3B82F6' } : {}}>
           {formatTime12h(item.start_time)}
         </span>
 
         <span
           className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${isSkipped ? 'line-through' : ''}`}
-          style={{ color: isCalendar ? '#3B82F6' : 'hsl(var(--foreground))' }}
+          style={{ color: isExternal ? '#3B82F6' : 'hsl(var(--foreground))' }}
         >
           {item.title}
         </span>
@@ -682,7 +682,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
 
         {isCompleted && <Check size={13} style={{ color: '#059669' }} className="flex-shrink-0" />}
 
-        {!isCalendar && (
+        {!isExternal && (
           <span className="text-[12px] text-muted-foreground flex-shrink-0">{item.est_minutes || 0}m</span>
         )}
       </div>
