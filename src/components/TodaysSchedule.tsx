@@ -397,10 +397,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
                 isActive={item.id === activeItemId}
                 expanded={expandedId === item.id}
                 onToggleExpand={() => {
-                  if (item.is_calendar_event || item.id === activeItemId) return;
+                  if (item.is_external || item.id === activeItemId) return;
                   setExpandedId((cur) => (cur === item.id ? null : item.id));
                 }}
-                onDelete={() => performDelete(item)}
+                onDelete={() => requestDelete(item)}
                 onPush={() => setPushItem(item)}
                 onDone={() => openDoneDialog(item)}
                 onActuallyDone={() => handleActuallyDone(item)}
