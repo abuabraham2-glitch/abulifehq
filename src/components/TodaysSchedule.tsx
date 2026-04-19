@@ -1,6 +1,16 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Check, Calendar, CalendarDays, GripVertical, Trash2, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar as CalendarPicker } from '@/components/ui/calendar';
@@ -67,6 +77,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   const [pushItem, setPushItem] = useState<PlanItem | null>(null);
   const [pickDateOpen, setPickDateOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<PlanItem | null>(null);
 
   // Out-of-sync rows after drag-reorder (calendar events whose times moved but Cal API not yet synced)
   const [outOfSyncIds, setOutOfSyncIds] = useState<Set<string>>(new Set());
@@ -139,6 +150,14 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   };
 
   // ===== Swipe-to-delete with undo =====
+  const requestDelete = (item: PlanItem) => {
+    if (item.calendar_event_id) {
+      setConfirmDeleteItem(item);
+    } else {
+      performDelete(item);
+    }
+  };
+
   const performDelete = async (item: PlanItem) => {
     // Snapshot for undo
     const snapshot = { ...item };
@@ -180,8 +199,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     const draggedItem = sortedItems[activeIdx];
     const overItem = sortedItems[overIdx];
     // Anchors cannot move and cannot be displaced past
-    if (draggedItem.is_calendar_event || draggedItem.id === activeItemId) return;
-    if (overItem.is_calendar_event) {
+    if (draggedItem.is_external || draggedItem.id === activeItemId) return;
+    if (overItem.is_external) {
       toast('Calendar events are anchors — drop somewhere else');
       return;
     }
@@ -194,9 +213,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     const reordered = arrayMove(sortedItems, activeIdx, overIdx);
 
     // Recalculate sequential start/end times preserving each item's duration.
-    // Walk through `reordered`. Calendar events stay anchored to their original times.
-    // For non-calendar items, slot them into gaps between anchors starting at max(prev_end, now).
-    const anchors = sortedItems.filter((i) => i.is_calendar_event)
+    // Walk through `reordered`. External calendar events stay anchored to their original times.
+    // For non-external items, slot them into gaps between anchors starting at max(prev_end, now).
+    const anchors = sortedItems.filter((i) => i.is_external)
       .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }))
       .sort((a, b) => a.start - b.start);
 
@@ -208,7 +227,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       const item = reordered[i];
       const dur = (item.est_minutes ?? Math.max(15, timeToMin(item.end_time) - timeToMin(item.start_time))) || 30;
 
-      if (item.is_calendar_event) {
+      if (item.is_external) {
         // Keep its original times, advance cursor past it
         cursor = Math.max(cursor, timeToMin(item.end_time));
         anchorIdx++;
@@ -388,10 +407,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
                 isActive={item.id === activeItemId}
                 expanded={expandedId === item.id}
                 onToggleExpand={() => {
-                  if (item.is_calendar_event || item.id === activeItemId) return;
+                  if (item.is_external || item.id === activeItemId) return;
                   setExpandedId((cur) => (cur === item.id ? null : item.id));
                 }}
-                onDelete={() => performDelete(item)}
+                onDelete={() => requestDelete(item)}
                 onPush={() => setPushItem(item)}
                 onDone={() => openDoneDialog(item)}
                 onActuallyDone={() => handleActuallyDone(item)}
@@ -484,6 +503,37 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm delete (calendar-synced rows) */}
+      <AlertDialog open={!!confirmDeleteItem} onOpenChange={(o) => !o && setConfirmDeleteItem(null)}>
+        <AlertDialogContent className="max-w-[340px] rounded-[18px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete from calendar too?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will also remove the event from your Google Calendar. You can't undo the calendar deletion.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="rounded-xl"
+              style={{ borderColor: '#B8906C', color: '#5C3D1E' }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl text-white hover:opacity-90"
+              style={{ backgroundColor: '#C44' }}
+              onClick={() => {
+                const it = confirmDeleteItem;
+                setConfirmDeleteItem(null);
+                if (it) performDelete(it);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -509,10 +559,10 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   const isCompleted = item.status === 'completed';
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
-  const isCalendar = item.is_calendar_event;
+  const isExternal = item.is_external === true;
 
-  const canSwipe = !isCalendar && !isActive;
-  const canDrag = !isCalendar && !isActive && isPending;
+  const canSwipe = !isExternal && !isActive;
+  const canDrag = !isExternal && !isActive && isPending;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -621,7 +671,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           opacity: (isCompleted || isSkipped) ? 0.5 : 1,
           transform: `translateX(${translateX}px)`,
           transition: startX.current !== null ? 'none' : 'transform 0.18s ease-out',
-          ...(isCalendar ? { backgroundColor: '#EEF4FF', borderRadius: '8px', borderLeft: `3px solid #93C5FD` } : {}),
+          ...(isExternal ? { backgroundColor: '#EEF4FF', borderRadius: '8px', borderLeft: `3px solid #93C5FD` } : {}),
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -644,7 +694,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <div className="w-[22px] flex-shrink-0" />
         )}
 
-        {isCalendar ? (
+        {isExternal ? (
           <Calendar size={12} className="flex-shrink-0" style={{ color: '#3B82F6' }} />
         ) : isCompleted ? (
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#059669' }} />
@@ -654,13 +704,13 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
         )}
 
-        <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1" style={isCalendar ? { color: '#3B82F6' } : {}}>
+        <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1" style={isExternal ? { color: '#3B82F6' } : {}}>
           {formatTime12h(item.start_time)}
         </span>
 
         <span
           className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${isSkipped ? 'line-through' : ''}`}
-          style={{ color: isCalendar ? '#3B82F6' : 'hsl(var(--foreground))' }}
+          style={{ color: isExternal ? '#3B82F6' : 'hsl(var(--foreground))' }}
         >
           {item.title}
         </span>
@@ -673,7 +723,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
 
         {isCompleted && <Check size={13} style={{ color: '#059669' }} className="flex-shrink-0" />}
 
-        {!isCalendar && (
+        {!isExternal && (
           <span className="text-[12px] text-muted-foreground flex-shrink-0">{item.est_minutes || 0}m</span>
         )}
       </div>
@@ -683,7 +733,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <p className="text-[14px] font-medium text-foreground mb-0.5">{item.title}</p>
           <p className="text-[12px] text-muted-foreground mb-2">
             {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
-            {!isCalendar && ` · ${item.est_minutes || 0}m`}
+            {!isExternal && ` · ${item.est_minutes || 0}m`}
             {item.category && ` · ${item.category}`}
           </p>
           {isPending && (

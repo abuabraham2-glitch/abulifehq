@@ -8,7 +8,7 @@ export function CalendarBanner() {
   const calEvents = useMemo(
     () =>
       (items ?? [])
-        .filter((i) => i.is_calendar_event)
+        .filter((i) => i.is_external === true)
         .sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [items],
   );

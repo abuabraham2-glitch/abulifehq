@@ -203,6 +203,7 @@ export type Database = {
           est_minutes: number | null
           id: string
           is_calendar_event: boolean | null
+          is_external: boolean
           local_only: boolean
           plan_id: string | null
           skip_reason: string | null
@@ -222,6 +223,7 @@ export type Database = {
           est_minutes?: number | null
           id?: string
           is_calendar_event?: boolean | null
+          is_external?: boolean
           local_only?: boolean
           plan_id?: string | null
           skip_reason?: string | null
@@ -241,6 +243,7 @@ export type Database = {
           est_minutes?: number | null
           id?: string
           is_calendar_event?: boolean | null
+          is_external?: boolean
           local_only?: boolean
           plan_id?: string | null
           skip_reason?: string | null

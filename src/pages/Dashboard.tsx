@@ -7,7 +7,7 @@ import { AddNoteModal } from '@/components/AddNoteModal';
 import { PlanChatSection } from '@/components/PlanChatSection';
 import { DayStripCard } from '@/components/DayStripCard';
 import { CalendarBanner } from '@/components/CalendarBanner';
-import { ReprioritizeSection } from '@/components/ReprioritizeSection';
+
 import { PreferencesSection } from '@/components/PreferencesSection';
 import { TodaysSchedule } from '@/components/TodaysSchedule';
 import { AddToTodayModal } from '@/components/AddToTodayModal';
@@ -129,9 +129,6 @@ export default function Dashboard() {
               ) : null
             }
           />
-
-          {/* Re-prioritize — only on Today */}
-          {!viewTomorrow && <ReprioritizeSection />}
 
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
