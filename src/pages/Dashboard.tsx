@@ -130,9 +130,6 @@ export default function Dashboard() {
             }
           />
 
-          {/* Re-prioritize — only on Today */}
-          {!viewTomorrow && <ReprioritizeSection />}
-
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
 
