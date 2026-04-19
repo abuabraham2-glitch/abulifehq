@@ -5,7 +5,7 @@ import { useTriageCount } from '@/hooks/useTriageQueue';
 const navItems = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/tasks', icon: ListTodo, label: 'Tasks' },
-  { to: '/grocery', icon: ShoppingCart, label: 'Grocery' },
+  { to: '/shopping', icon: ShoppingCart, label: 'Shopping' },
   { to: '/notes', icon: StickyNote, label: 'Notes' },
   { to: '/more', icon: MoreHorizontal, label: 'More', showBadge: true },
 ];
