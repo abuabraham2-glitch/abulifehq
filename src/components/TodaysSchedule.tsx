@@ -374,6 +374,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
         </div>
       )}
 
+      {addButton}
+
       <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
