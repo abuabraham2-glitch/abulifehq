@@ -67,6 +67,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   const [pushItem, setPushItem] = useState<PlanItem | null>(null);
   const [pickDateOpen, setPickDateOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<PlanItem | null>(null);
 
   // Out-of-sync rows after drag-reorder (calendar events whose times moved but Cal API not yet synced)
   const [outOfSyncIds, setOutOfSyncIds] = useState<Set<string>>(new Set());
