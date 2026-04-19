@@ -189,8 +189,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     const draggedItem = sortedItems[activeIdx];
     const overItem = sortedItems[overIdx];
     // Anchors cannot move and cannot be displaced past
-    if (draggedItem.is_calendar_event || draggedItem.id === activeItemId) return;
-    if (overItem.is_calendar_event) {
+    if (draggedItem.is_external || draggedItem.id === activeItemId) return;
+    if (overItem.is_external) {
       toast('Calendar events are anchors — drop somewhere else');
       return;
     }
@@ -203,9 +203,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     const reordered = arrayMove(sortedItems, activeIdx, overIdx);
 
     // Recalculate sequential start/end times preserving each item's duration.
-    // Walk through `reordered`. Calendar events stay anchored to their original times.
-    // For non-calendar items, slot them into gaps between anchors starting at max(prev_end, now).
-    const anchors = sortedItems.filter((i) => i.is_calendar_event)
+    // Walk through `reordered`. External calendar events stay anchored to their original times.
+    // For non-external items, slot them into gaps between anchors starting at max(prev_end, now).
+    const anchors = sortedItems.filter((i) => i.is_external)
       .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }))
       .sort((a, b) => a.start - b.start);
 
