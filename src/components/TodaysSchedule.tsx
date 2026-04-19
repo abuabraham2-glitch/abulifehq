@@ -692,7 +692,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <p className="text-[14px] font-medium text-foreground mb-0.5">{item.title}</p>
           <p className="text-[12px] text-muted-foreground mb-2">
             {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
-            {!isCalendar && ` · ${item.est_minutes || 0}m`}
+            {!isExternal && ` · ${item.est_minutes || 0}m`}
             {item.category && ` · ${item.category}`}
           </p>
           {isPending && (
