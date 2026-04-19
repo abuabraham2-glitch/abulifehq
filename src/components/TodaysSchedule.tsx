@@ -518,10 +518,10 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   const isCompleted = item.status === 'completed';
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
-  const isCalendar = item.is_calendar_event;
+  const isExternal = item.is_external === true;
 
-  const canSwipe = !isCalendar && !isActive;
-  const canDrag = !isCalendar && !isActive && isPending;
+  const canSwipe = !isExternal && !isActive;
+  const canDrag = !isExternal && !isActive && isPending;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
