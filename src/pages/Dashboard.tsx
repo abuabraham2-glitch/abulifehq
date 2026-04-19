@@ -7,7 +7,7 @@ import { AddNoteModal } from '@/components/AddNoteModal';
 import { PlanChatSection } from '@/components/PlanChatSection';
 import { DayStripCard } from '@/components/DayStripCard';
 import { CalendarBanner } from '@/components/CalendarBanner';
-import { ReprioritizeSection } from '@/components/ReprioritizeSection';
+
 import { PreferencesSection } from '@/components/PreferencesSection';
 import { TodaysSchedule } from '@/components/TodaysSchedule';
 import { AddToTodayModal } from '@/components/AddToTodayModal';
