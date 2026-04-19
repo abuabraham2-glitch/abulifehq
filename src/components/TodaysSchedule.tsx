@@ -217,7 +217,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       const item = reordered[i];
       const dur = (item.est_minutes ?? Math.max(15, timeToMin(item.end_time) - timeToMin(item.start_time))) || 30;
 
-      if (item.is_calendar_event) {
+      if (item.is_external) {
         // Keep its original times, advance cursor past it
         cursor = Math.max(cursor, timeToMin(item.end_time));
         anchorIdx++;
