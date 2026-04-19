@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { AppProvider } from "@/contexts/AppContext";
@@ -22,6 +23,7 @@ const App = () => (
       <AppProvider>
         <TooltipProvider>
           <Toaster />
+          <SonnerToaster position="bottom-center" richColors={false} toastOptions={{ style: { background: '#5C3D1E', color: '#fff', border: 'none' } }} />
           <BrowserRouter>
             <Layout>
               <Routes>
