@@ -36,7 +36,20 @@ export default function Dashboard() {
     <div className="space-y-5 md:space-y-6 pb-4">
       {/* Greeting */}
       <div>
-        <p className="text-[13px] md:text-[14px] text-muted-foreground">{formatDate(new Date())}</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="inline-flex items-center gap-1 text-[13px] md:text-[14px] text-muted-foreground hover:text-foreground transition-colors">
+              {formatDate(new Date())}
+              <ChevronDown size={12} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="rounded-xl">
+            <DropdownMenuItem onClick={() => setRegenOpen(true)} className="text-[13px] cursor-pointer">
+              <RefreshCw size={14} className="mr-2" />
+              Regenerate plan for today
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <h1 className="text-[22px] md:text-[32px] md:font-semibold font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
 
         <div className="flex gap-2 mt-4">
