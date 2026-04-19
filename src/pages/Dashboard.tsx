@@ -113,7 +113,22 @@ export default function Dashboard() {
           <CalendarBanner />
 
           {/* Toggle + Focus + Timeline */}
-          <TodaysSchedule viewTomorrow={viewTomorrow} onToggleTab={() => setViewTomorrow(!viewTomorrow)} />
+          <TodaysSchedule
+            viewTomorrow={viewTomorrow}
+            onToggleTab={() => setViewTomorrow(!viewTomorrow)}
+            addButton={
+              !viewTomorrow ? (
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] text-[14px] font-medium min-h-[48px] mt-2 mb-1 bg-card"
+                  style={{ border: '1.5px dashed #B8906C', color: '#5C3D1E' }}
+                >
+                  <Plus size={16} />
+                  Add to today
+                </button>
+              ) : null
+            }
+          />
 
           {/* Re-prioritize — only on Today */}
           {!viewTomorrow && <ReprioritizeSection />}
@@ -128,6 +143,8 @@ export default function Dashboard() {
 
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
       <AddNoteModal open={noteOpen} onOpenChange={setNoteOpen} />
+      <AddToTodayModal open={addOpen} onOpenChange={setAddOpen} />
+      <RegenerateTodayDialog open={regenOpen} onOpenChange={setRegenOpen} />
     </div>
   );
 }
