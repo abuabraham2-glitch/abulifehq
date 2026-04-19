@@ -140,6 +140,14 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   };
 
   // ===== Swipe-to-delete with undo =====
+  const requestDelete = (item: PlanItem) => {
+    if (item.calendar_event_id) {
+      setConfirmDeleteItem(item);
+    } else {
+      performDelete(item);
+    }
+  };
+
   const performDelete = async (item: PlanItem) => {
     // Snapshot for undo
     const snapshot = { ...item };
