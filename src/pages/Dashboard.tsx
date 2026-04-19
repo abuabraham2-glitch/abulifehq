@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, ChevronRight } from 'lucide-react';
+import { Inbox, ChevronRight, ChevronDown, RefreshCw, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { AddNoteModal } from '@/components/AddNoteModal';
@@ -10,6 +10,9 @@ import { CalendarBanner } from '@/components/CalendarBanner';
 import { ReprioritizeSection } from '@/components/ReprioritizeSection';
 import { PreferencesSection } from '@/components/PreferencesSection';
 import { TodaysSchedule } from '@/components/TodaysSchedule';
+import { AddToTodayModal } from '@/components/AddToTodayModal';
+import { RegenerateTodayDialog } from '@/components/RegenerateTodayDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTodayPlan, useTodayPlanItems } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { getGreeting, formatDate } from '@/lib/constants';
@@ -19,6 +22,8 @@ export default function Dashboard() {
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [viewTomorrow, setViewTomorrow] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [regenOpen, setRegenOpen] = useState(false);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
