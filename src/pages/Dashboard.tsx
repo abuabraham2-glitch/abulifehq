@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, ChevronRight } from 'lucide-react';
+import { Inbox, ChevronRight, ChevronDown, RefreshCw, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { AddNoteModal } from '@/components/AddNoteModal';
@@ -10,6 +10,9 @@ import { CalendarBanner } from '@/components/CalendarBanner';
 import { ReprioritizeSection } from '@/components/ReprioritizeSection';
 import { PreferencesSection } from '@/components/PreferencesSection';
 import { TodaysSchedule } from '@/components/TodaysSchedule';
+import { AddToTodayModal } from '@/components/AddToTodayModal';
+import { RegenerateTodayDialog } from '@/components/RegenerateTodayDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTodayPlan, useTodayPlanItems } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
 import { getGreeting, formatDate } from '@/lib/constants';
@@ -19,6 +22,8 @@ export default function Dashboard() {
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [viewTomorrow, setViewTomorrow] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [regenOpen, setRegenOpen] = useState(false);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -31,7 +36,20 @@ export default function Dashboard() {
     <div className="space-y-5 md:space-y-6 pb-4">
       {/* Greeting */}
       <div>
-        <p className="text-[13px] md:text-[14px] text-muted-foreground">{formatDate(new Date())}</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="inline-flex items-center gap-1 text-[13px] md:text-[14px] text-muted-foreground hover:text-foreground transition-colors">
+              {formatDate(new Date())}
+              <ChevronDown size={12} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="rounded-xl">
+            <DropdownMenuItem onClick={() => setRegenOpen(true)} className="text-[13px] cursor-pointer">
+              <RefreshCw size={14} className="mr-2" />
+              Regenerate plan for today
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <h1 className="text-[22px] md:text-[32px] md:font-semibold font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
 
         <div className="flex gap-2 mt-4">
@@ -95,7 +113,22 @@ export default function Dashboard() {
           <CalendarBanner />
 
           {/* Toggle + Focus + Timeline */}
-          <TodaysSchedule viewTomorrow={viewTomorrow} onToggleTab={() => setViewTomorrow(!viewTomorrow)} />
+          <TodaysSchedule
+            viewTomorrow={viewTomorrow}
+            onToggleTab={() => setViewTomorrow(!viewTomorrow)}
+            addButton={
+              !viewTomorrow ? (
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] text-[14px] font-medium min-h-[48px] mt-2 mb-1 bg-card"
+                  style={{ border: '1.5px dashed #B8906C', color: '#5C3D1E' }}
+                >
+                  <Plus size={16} />
+                  Add to today
+                </button>
+              ) : null
+            }
+          />
 
           {/* Re-prioritize — only on Today */}
           {!viewTomorrow && <ReprioritizeSection />}
@@ -110,6 +143,8 @@ export default function Dashboard() {
 
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
       <AddNoteModal open={noteOpen} onOpenChange={setNoteOpen} />
+      <AddToTodayModal open={addOpen} onOpenChange={setAddOpen} />
+      <RegenerateTodayDialog open={regenOpen} onOpenChange={setRegenOpen} />
     </div>
   );
 }
