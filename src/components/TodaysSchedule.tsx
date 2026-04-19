@@ -493,6 +493,37 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirm delete (calendar-synced rows) */}
+      <AlertDialog open={!!confirmDeleteItem} onOpenChange={(o) => !o && setConfirmDeleteItem(null)}>
+        <AlertDialogContent className="max-w-[340px] rounded-[18px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete from calendar too?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will also remove the event from your Google Calendar. You can't undo the calendar deletion.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="rounded-xl"
+              style={{ borderColor: '#B8906C', color: '#5C3D1E' }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl text-white hover:opacity-90"
+              style={{ backgroundColor: '#C44' }}
+              onClick={() => {
+                const it = confirmDeleteItem;
+                setConfirmDeleteItem(null);
+                if (it) performDelete(it);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
