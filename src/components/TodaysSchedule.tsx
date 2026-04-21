@@ -125,12 +125,52 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     setDoneItem(item);
   };
 
-  const handleSaveDone = async () => {
+  const handleSaveDone = () => {
     if (!doneItem) return;
-    await updatePlanItem.mutateAsync({ id: doneItem.id, status: 'completed', actual_minutes: actualMinutes });
-    if (doneItem.task_id) await completeTask.mutateAsync(doneItem.task_id);
-    fireSkipWebhook(doneItem);
+    const item = doneItem;
+    const duration = actualMinutes;
     setDoneItem(null);
+
+    // Visually mark complete immediately
+    setPendingCompleteIds((prev) => {
+      const next = new Set(prev);
+      next.add(item.id);
+      return next;
+    });
+
+    const timeoutId = setTimeout(async () => {
+      pendingCompletions.current.delete(item.id);
+      setPendingCompleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+      await updatePlanItem.mutateAsync({ id: item.id, status: 'completed', actual_minutes: duration });
+      if (item.task_id) await completeTask.mutateAsync(item.task_id);
+      fireSkipWebhook(item);
+    }, 5000);
+
+    pendingCompletions.current.set(item.id, { timeoutId, duration });
+
+    toast(`Marked done · ${duration}m`, {
+      duration: 5000,
+      style: { background: '#5C3D1E', color: '#fff', border: 'none' },
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const entry = pendingCompletions.current.get(item.id);
+          if (entry) {
+            clearTimeout(entry.timeoutId);
+            pendingCompletions.current.delete(item.id);
+          }
+          setPendingCompleteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
+          });
+        },
+      },
+    });
   };
 
   const handlePushTomorrow = async (item: PlanItem) => {
