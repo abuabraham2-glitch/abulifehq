@@ -34,12 +34,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
+import { usePlanItemsByDate, useUpdatePlanItem, useUpdatePlanItemDuration, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask, useUpdateTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { timeToMin, minToTime } from '@/lib/planScheduling';
+import { timeToMin, minToTime, pacificIso } from '@/lib/planScheduling';
+import { DurationPicker } from '@/components/DurationPicker';
 
 const SKIP_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event';
 
