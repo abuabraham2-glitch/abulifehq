@@ -83,6 +83,22 @@ export function useTodayPlanItems() {
   });
 }
 
+export function useUpdatePlanItemDuration() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, est_minutes, end_time }: { id: string; est_minutes: number; end_time: string }) => {
+      const { error } = await supabase
+        .from('plan_items')
+        .update({ est_minutes, end_time } as any)
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    },
+  });
+}
+
 export function useUpdatePlanItem() {
   const queryClient = useQueryClient();
   return useMutation({

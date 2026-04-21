@@ -12,6 +12,7 @@ import { PreferencesSection } from '@/components/PreferencesSection';
 import { TodaysSchedule } from '@/components/TodaysSchedule';
 import { AddToTodayModal } from '@/components/AddToTodayModal';
 import { RegenerateTodayDialog } from '@/components/RegenerateTodayDialog';
+import { PushedTodaySection } from '@/components/PushedTodaySection';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTodayPlan, useTodayPlanItems } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
@@ -129,6 +130,9 @@ export default function Dashboard() {
               ) : null
             }
           />
+
+          {/* Pushed today (only on Today tab) */}
+          {!viewTomorrow && <PushedTodaySection />}
 
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />

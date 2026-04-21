@@ -34,14 +34,16 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
+import { usePlanItemsByDate, useUpdatePlanItem, useUpdatePlanItemDuration, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
 import { useCompleteTask, useUpdateTask } from '@/hooks/useTasks';
 import { formatTime12h, getCategoryColor } from '@/lib/constants';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
-import { timeToMin, minToTime } from '@/lib/planScheduling';
+import { timeToMin, minToTime, pacificIso } from '@/lib/planScheduling';
+import { DurationPicker } from '@/components/DurationPicker';
 
 const SKIP_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event';
+const UPDATE_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event';
 
 function getNextMonday(weeksAhead: number = 1): string {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
@@ -67,9 +69,14 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
+  const updateDuration = useUpdatePlanItemDuration();
   const completeTask = useCompleteTask();
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
+
+  // Pending completions awaiting 5s undo window. Maps planItemId -> { timeoutId, duration }
+  const pendingCompletions = useRef<Map<string, { timeoutId: ReturnType<typeof setTimeout>; duration: number }>>(new Map());
+  const [pendingCompleteIds, setPendingCompleteIds] = useState<Set<string>>(new Set());
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
@@ -105,6 +112,17 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     return activeItem.start_time < nowTime;
   }, [activeItem, nowTime, viewTomorrow]);
 
+  // Overlap detection: a row overlaps if its start_time < previous row's end_time (sorted-timeline only)
+  const overlapIds = useMemo(() => {
+    const set = new Set<string>();
+    for (let i = 1; i < sortedItems.length; i++) {
+      const prev = sortedItems[i - 1];
+      const cur = sortedItems[i];
+      if (cur.start_time < prev.end_time) set.add(cur.id);
+    }
+    return set;
+  }, [sortedItems]);
+
   const fireSkipWebhook = (item: PlanItem) => {
     fetch(SKIP_EVENT_WEBHOOK, {
       method: 'POST',
@@ -118,12 +136,52 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     setDoneItem(item);
   };
 
-  const handleSaveDone = async () => {
+  const handleSaveDone = () => {
     if (!doneItem) return;
-    await updatePlanItem.mutateAsync({ id: doneItem.id, status: 'completed', actual_minutes: actualMinutes });
-    if (doneItem.task_id) await completeTask.mutateAsync(doneItem.task_id);
-    fireSkipWebhook(doneItem);
+    const item = doneItem;
+    const duration = actualMinutes;
     setDoneItem(null);
+
+    // Visually mark complete immediately
+    setPendingCompleteIds((prev) => {
+      const next = new Set(prev);
+      next.add(item.id);
+      return next;
+    });
+
+    const timeoutId = setTimeout(async () => {
+      pendingCompletions.current.delete(item.id);
+      setPendingCompleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+      await updatePlanItem.mutateAsync({ id: item.id, status: 'completed', actual_minutes: duration });
+      if (item.task_id) await completeTask.mutateAsync(item.task_id);
+      fireSkipWebhook(item);
+    }, 5000);
+
+    pendingCompletions.current.set(item.id, { timeoutId, duration });
+
+    toast(`Marked done · ${duration}m`, {
+      duration: 5000,
+      style: { background: '#5C3D1E', color: '#fff', border: 'none' },
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          const entry = pendingCompletions.current.get(item.id);
+          if (entry) {
+            clearTimeout(entry.timeoutId);
+            pendingCompletions.current.delete(item.id);
+          }
+          setPendingCompleteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
+          });
+        },
+      },
+    });
   };
 
   const handlePushTomorrow = async (item: PlanItem) => {
@@ -147,6 +205,27 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     updatePlanItem.mutateAsync({ id: item.id, status: 'pending' }).then(() => {
       openDoneDialog({ ...item, status: 'pending' });
     });
+  };
+
+  const handleDurationChange = async (item: PlanItem, newMinutes: number) => {
+    const newEndMin = timeToMin(item.start_time) + newMinutes;
+    const newEndTime = minToTime(newEndMin);
+    await updateDuration.mutateAsync({ id: item.id, est_minutes: newMinutes, end_time: newEndTime });
+    if (item.calendar_event_id) {
+      fetch(UPDATE_EVENT_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: item.calendar_event_id,
+          start: pacificIso(dateString, item.start_time),
+          end: pacificIso(dateString, newEndTime),
+          title: item.title,
+          category: item.category,
+          planItemId: item.id,
+        }),
+      }).catch(() => {});
+    }
+    toast(`Duration updated · ${newMinutes}m`, { duration: 3000 });
   };
 
   // ===== Swipe-to-delete with undo =====
@@ -400,23 +479,29 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortedItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0">
-            {sortedItems.map((item) => (
-              <ScheduleRow
-                key={item.id}
-                item={item}
-                isActive={item.id === activeItemId}
-                expanded={expandedId === item.id}
-                onToggleExpand={() => {
-                  if (item.is_external || item.id === activeItemId) return;
-                  setExpandedId((cur) => (cur === item.id ? null : item.id));
-                }}
-                onDelete={() => requestDelete(item)}
-                onPush={() => setPushItem(item)}
-                onDone={() => openDoneDialog(item)}
-                onActuallyDone={() => handleActuallyDone(item)}
-                outOfSync={outOfSyncIds.has(item.id)}
-              />
-            ))}
+            {sortedItems.map((item) => {
+              const pendingComplete = pendingCompleteIds.has(item.id);
+              const displayItem = pendingComplete ? { ...item, status: 'completed' } : item;
+              return (
+                <ScheduleRow
+                  key={item.id}
+                  item={displayItem as PlanItem}
+                  isActive={item.id === activeItemId && !pendingComplete}
+                  expanded={expandedId === item.id}
+                  onToggleExpand={() => {
+                    if (item.is_external || item.id === activeItemId) return;
+                    setExpandedId((cur) => (cur === item.id ? null : item.id));
+                  }}
+                  onDelete={() => requestDelete(item)}
+                  onPush={() => setPushItem(item)}
+                  onDone={() => openDoneDialog(item)}
+                  onActuallyDone={() => handleActuallyDone(item)}
+                  outOfSync={outOfSyncIds.has(item.id)}
+                  overlaps={overlapIds.has(item.id)}
+                  onChangeDuration={(m) => handleDurationChange(item, m)}
+                />
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>
@@ -550,12 +635,14 @@ interface RowProps {
   onDone: () => void;
   onActuallyDone: () => void;
   outOfSync: boolean;
+  overlaps: boolean;
+  onChangeDuration: (m: number) => void;
 }
 
 const SWIPE_REVEAL = 80;
 const SWIPE_THRESHOLD = 40;
 
-function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync }: RowProps) {
+function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration }: RowProps) {
   const isCompleted = item.status === 'completed';
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
@@ -721,10 +808,20 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           </span>
         )}
 
+        {overlaps && (
+          <span title="Overlaps with the task above">
+            <AlertCircle size={13} className="flex-shrink-0" style={{ color: '#C44' }} />
+          </span>
+        )}
+
         {isCompleted && <Check size={13} style={{ color: '#059669' }} className="flex-shrink-0" />}
 
         {!isExternal && (
-          <span className="text-[12px] text-muted-foreground flex-shrink-0">{item.est_minutes || 0}m</span>
+          <DurationPicker
+            value={item.est_minutes || 0}
+            disabled={isExternal || isCompleted || isSkipped || item.status === 'deferred'}
+            onChange={onChangeDuration}
+          />
         )}
       </div>
 
