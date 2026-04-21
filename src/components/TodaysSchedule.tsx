@@ -479,23 +479,29 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={sortedItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0">
-            {sortedItems.map((item) => (
-              <ScheduleRow
-                key={item.id}
-                item={item}
-                isActive={item.id === activeItemId}
-                expanded={expandedId === item.id}
-                onToggleExpand={() => {
-                  if (item.is_external || item.id === activeItemId) return;
-                  setExpandedId((cur) => (cur === item.id ? null : item.id));
-                }}
-                onDelete={() => requestDelete(item)}
-                onPush={() => setPushItem(item)}
-                onDone={() => openDoneDialog(item)}
-                onActuallyDone={() => handleActuallyDone(item)}
-                outOfSync={outOfSyncIds.has(item.id)}
-              />
-            ))}
+            {sortedItems.map((item) => {
+              const pendingComplete = pendingCompleteIds.has(item.id);
+              const displayItem = pendingComplete ? { ...item, status: 'completed' } : item;
+              return (
+                <ScheduleRow
+                  key={item.id}
+                  item={displayItem as PlanItem}
+                  isActive={item.id === activeItemId && !pendingComplete}
+                  expanded={expandedId === item.id}
+                  onToggleExpand={() => {
+                    if (item.is_external || item.id === activeItemId) return;
+                    setExpandedId((cur) => (cur === item.id ? null : item.id));
+                  }}
+                  onDelete={() => requestDelete(item)}
+                  onPush={() => setPushItem(item)}
+                  onDone={() => openDoneDialog(item)}
+                  onActuallyDone={() => handleActuallyDone(item)}
+                  outOfSync={outOfSyncIds.has(item.id)}
+                  overlaps={overlapIds.has(item.id)}
+                  onChangeDuration={(m) => handleDurationChange(item, m)}
+                />
+              );
+            })}
           </div>
         </SortableContext>
       </DndContext>
