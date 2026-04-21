@@ -131,6 +131,9 @@ export default function Dashboard() {
             }
           />
 
+          {/* Pushed today (only on Today tab) */}
+          {!viewTomorrow && <PushedTodaySection />}
+
           {/* Chat input for plan revisions */}
           <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
 
