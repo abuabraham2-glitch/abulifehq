@@ -69,9 +69,14 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
+  const updateDuration = useUpdatePlanItemDuration();
   const completeTask = useCompleteTask();
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
+
+  // Pending completions awaiting 5s undo window. Maps planItemId -> { timeoutId, duration }
+  const pendingCompletions = useRef<Map<string, { timeoutId: ReturnType<typeof setTimeout>; duration: number }>>(new Map());
+  const [pendingCompleteIds, setPendingCompleteIds] = useState<Set<string>>(new Set());
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
