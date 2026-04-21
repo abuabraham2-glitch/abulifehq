@@ -112,6 +112,17 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     return activeItem.start_time < nowTime;
   }, [activeItem, nowTime, viewTomorrow]);
 
+  // Overlap detection: a row overlaps if its start_time < previous row's end_time (sorted-timeline only)
+  const overlapIds = useMemo(() => {
+    const set = new Set<string>();
+    for (let i = 1; i < sortedItems.length; i++) {
+      const prev = sortedItems[i - 1];
+      const cur = sortedItems[i];
+      if (cur.start_time < prev.end_time) set.add(cur.id);
+    }
+    return set;
+  }, [sortedItems]);
+
   const fireSkipWebhook = (item: PlanItem) => {
     fetch(SKIP_EVENT_WEBHOOK, {
       method: 'POST',
