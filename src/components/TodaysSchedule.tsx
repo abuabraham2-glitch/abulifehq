@@ -196,6 +196,27 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     });
   };
 
+  const handleDurationChange = async (item: PlanItem, newMinutes: number) => {
+    const newEndMin = timeToMin(item.start_time) + newMinutes;
+    const newEndTime = minToTime(newEndMin);
+    await updateDuration.mutateAsync({ id: item.id, est_minutes: newMinutes, end_time: newEndTime });
+    if (item.calendar_event_id) {
+      fetch(UPDATE_EVENT_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: item.calendar_event_id,
+          start: pacificIso(dateString, item.start_time),
+          end: pacificIso(dateString, newEndTime),
+          title: item.title,
+          category: item.category,
+          planItemId: item.id,
+        }),
+      }).catch(() => {});
+    }
+    toast(`Duration updated · ${newMinutes}m`, { duration: 3000 });
+  };
+
   // ===== Swipe-to-delete with undo =====
   const requestDelete = (item: PlanItem) => {
     if (item.calendar_event_id) {
