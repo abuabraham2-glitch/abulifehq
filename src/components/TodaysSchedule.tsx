@@ -43,6 +43,7 @@ import { timeToMin, minToTime, pacificIso } from '@/lib/planScheduling';
 import { DurationPicker } from '@/components/DurationPicker';
 
 const SKIP_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event';
+const UPDATE_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event';
 
 function getNextMonday(weeksAhead: number = 1): string {
   const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
