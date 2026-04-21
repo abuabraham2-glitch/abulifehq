@@ -808,10 +808,20 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           </span>
         )}
 
+        {overlaps && (
+          <span title="Overlaps with the task above">
+            <AlertCircle size={13} className="flex-shrink-0" style={{ color: '#C44' }} />
+          </span>
+        )}
+
         {isCompleted && <Check size={13} style={{ color: '#059669' }} className="flex-shrink-0" />}
 
         {!isExternal && (
-          <span className="text-[12px] text-muted-foreground flex-shrink-0">{item.est_minutes || 0}m</span>
+          <DurationPicker
+            value={item.est_minutes || 0}
+            disabled={isExternal || isCompleted || isSkipped || item.status === 'deferred'}
+            onChange={onChangeDuration}
+          />
         )}
       </div>
 
