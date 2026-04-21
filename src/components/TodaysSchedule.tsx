@@ -635,12 +635,14 @@ interface RowProps {
   onDone: () => void;
   onActuallyDone: () => void;
   outOfSync: boolean;
+  overlaps: boolean;
+  onChangeDuration: (m: number) => void;
 }
 
 const SWIPE_REVEAL = 80;
 const SWIPE_THRESHOLD = 40;
 
-function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync }: RowProps) {
+function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration }: RowProps) {
   const isCompleted = item.status === 'completed';
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
