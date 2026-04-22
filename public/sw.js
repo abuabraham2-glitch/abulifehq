@@ -1,4 +1,4 @@
-const CACHE_NAME = 'life-hq-v1';
+const CACHE_NAME = 'life-hq-v2';
 const PRECACHE_URLS = ['/', '/index.html'];
 
 self.addEventListener('install', (event) => {
