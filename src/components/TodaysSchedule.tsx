@@ -98,6 +98,13 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     return [...(planItems ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time));
   }, [planItems]);
 
+  // Timeline render excludes pushed rows (skipped → Tomorrow, deferred → future date).
+  // Pushed rows still exist in DB and surface in the "Pushed today" section.
+  const visibleItems = useMemo(
+    () => sortedItems.filter((i) => i.status !== 'skipped' && i.status !== 'deferred'),
+    [sortedItems],
+  );
+
   const activeItemId = useMemo(() => {
     if (viewTomorrow) return null;
     const pending = sortedItems.filter((i) => i.status !== 'completed' && i.status !== 'skipped');
@@ -192,8 +199,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   };
 
   const handleDefer = async (item: PlanItem, deferDate: string) => {
+    // UPDATE plan_items.status to 'deferred' (do NOT delete — row still shows in "Pushed today")
+    await updatePlanItem.mutateAsync({ id: item.id, status: 'deferred' });
+    // PATCH tasks: status='deferred' AND deferred_until in a single update
     if (item.task_id) await updateTask.mutateAsync({ id: item.task_id, status: 'deferred', deferred_until: deferDate });
-    await supabase.from('plan_items').delete().eq('id', item.id);
     fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
     setPushItem(null);
@@ -393,7 +402,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
         <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
         <div className="space-y-0">
-          {sortedItems.map((item) => (
+          {visibleItems.map((item) => (
             <div
               key={item.id}
               className="flex items-center gap-2.5 py-2 px-2 min-h-[40px]"
@@ -477,9 +486,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={sortedItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={visibleItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0">
-            {sortedItems.map((item) => {
+            {visibleItems.map((item) => {
               const pendingComplete = pendingCompleteIds.has(item.id);
               const displayItem = pendingComplete ? { ...item, status: 'completed' } : item;
               return (
