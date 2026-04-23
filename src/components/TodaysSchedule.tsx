@@ -192,8 +192,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   };
 
   const handleDefer = async (item: PlanItem, deferDate: string) => {
+    // UPDATE plan_items.status to 'deferred' (do NOT delete — row still shows in "Pushed today")
+    await updatePlanItem.mutateAsync({ id: item.id, status: 'deferred' });
+    // PATCH tasks: status='deferred' AND deferred_until in a single update
     if (item.task_id) await updateTask.mutateAsync({ id: item.task_id, status: 'deferred', deferred_until: deferDate });
-    await supabase.from('plan_items').delete().eq('id', item.id);
     fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
     setPushItem(null);
