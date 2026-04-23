@@ -13,6 +13,8 @@ import Triage from "./pages/Triage";
 import Shopping from "./pages/Shopping";
 import Notes from "./pages/Notes";
 import More from "./pages/More";
+import ReadingList from "./pages/ReadingList";
+import ShareReceiver from "./pages/ShareReceiver";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,8 @@ const App = () => (
                 <Route path="/grocery" element={<Navigate to="/shopping" replace />} />
                 <Route path="/notes" element={<Notes />} />
                 <Route path="/more" element={<More />} />
+                <Route path="/reading-list" element={<ReadingList />} />
+                <Route path="/share-receiver" element={<ShareReceiver />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Layout>

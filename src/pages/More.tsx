@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Grid3X3, Inbox, Moon, Sun, ChevronRight, Download } from 'lucide-react';
+import { Grid3X3, Inbox, Moon, Sun, ChevronRight, Download, BookOpen } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
 import { useTriageCount } from '@/hooks/useTriageQueue';
+import { useReadingQueueCount } from '@/hooks/useReadingQueue';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -13,6 +14,7 @@ export default function More() {
   const navigate = useNavigate();
   const { theme, toggle } = useTheme();
   const { data: triageCount = 0 } = useTriageCount();
+  const readingCount = useReadingQueueCount();
   const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
 
@@ -71,6 +73,27 @@ export default function More() {
             {triageCount > 0 && (
               <span className="min-w-[20px] h-[20px] px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold flex items-center justify-center">
                 {triageCount}
+              </span>
+            )}
+          </div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </button>
+
+        {/* Reading List */}
+        <button
+          onClick={() => navigate('/reading-list')}
+          className="w-full flex items-center justify-between p-4 min-h-[52px] border-b"
+          style={{ borderColor: 'hsl(var(--border))' }}
+        >
+          <div className="flex items-center gap-3">
+            <BookOpen size={20} className="text-muted-foreground" />
+            <span className="text-[15px] text-foreground">Reading List</span>
+            {readingCount > 0 && (
+              <span
+                className="text-[11px] font-medium rounded-full px-2 py-0.5"
+                style={{ backgroundColor: '#5C3D1E', color: '#fff' }}
+              >
+                {readingCount}
               </span>
             )}
           </div>
