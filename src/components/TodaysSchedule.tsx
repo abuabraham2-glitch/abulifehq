@@ -486,9 +486,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={sortedItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={visibleItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <div className="space-y-0">
-            {sortedItems.map((item) => {
+            {visibleItems.map((item) => {
               const pendingComplete = pendingCompleteIds.has(item.id);
               const displayItem = pendingComplete ? { ...item, status: 'completed' } : item;
               return (
