@@ -98,6 +98,13 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     return [...(planItems ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time));
   }, [planItems]);
 
+  // Timeline render excludes pushed rows (skipped → Tomorrow, deferred → future date).
+  // Pushed rows still exist in DB and surface in the "Pushed today" section.
+  const visibleItems = useMemo(
+    () => sortedItems.filter((i) => i.status !== 'skipped' && i.status !== 'deferred'),
+    [sortedItems],
+  );
+
   const activeItemId = useMemo(() => {
     if (viewTomorrow) return null;
     const pending = sortedItems.filter((i) => i.status !== 'completed' && i.status !== 'skipped');
