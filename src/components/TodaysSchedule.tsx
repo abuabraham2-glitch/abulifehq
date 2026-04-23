@@ -402,7 +402,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
         <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
         <div className="space-y-0">
-          {sortedItems.map((item) => (
+          {visibleItems.map((item) => (
             <div
               key={item.id}
               className="flex items-center gap-2.5 py-2 px-2 min-h-[40px]"
