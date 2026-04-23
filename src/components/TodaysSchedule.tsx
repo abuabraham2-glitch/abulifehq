@@ -192,7 +192,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
   };
 
   const handleDefer = async (item: PlanItem, deferDate: string) => {
-    if (item.task_id) await updateTask.mutateAsync({ id: item.task_id, status: 'active', deferred_until: deferDate });
+    if (item.task_id) await updateTask.mutateAsync({ id: item.task_id, status: 'deferred', deferred_until: deferDate });
     await supabase.from('plan_items').delete().eq('id', item.id);
     fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
