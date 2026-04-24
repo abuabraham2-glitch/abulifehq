@@ -297,48 +297,6 @@ export type Database = {
         }
         Relationships: []
       }
-      reading_queue: {
-        Row: {
-          bottom_line: string | null
-          bullets: string[] | null
-          created_at: string
-          error_message: string | null
-          id: string
-          shared_at: string
-          source: string | null
-          status: string
-          summary_generated_at: string | null
-          title: string | null
-          url: string
-        }
-        Insert: {
-          bottom_line?: string | null
-          bullets?: string[] | null
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          shared_at?: string
-          source?: string | null
-          status?: string
-          summary_generated_at?: string | null
-          title?: string | null
-          url: string
-        }
-        Update: {
-          bottom_line?: string | null
-          bullets?: string[] | null
-          created_at?: string
-          error_message?: string | null
-          id?: string
-          shared_at?: string
-          source?: string | null
-          status?: string
-          summary_generated_at?: string | null
-          title?: string | null
-          url?: string
-        }
-        Relationships: []
-      }
       recurring_tasks: {
         Row: {
           active: boolean | null
