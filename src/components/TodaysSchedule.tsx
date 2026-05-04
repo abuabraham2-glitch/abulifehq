@@ -826,7 +826,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   return (
-    <div ref={(el) => { setNodeRef(el); rowRef.current = el; }} style={dragStyle} className="relative overflow-hidden rounded-md">
+    <div ref={setRefs} style={dragStyle} className="relative overflow-hidden rounded-md">
       {/* Red delete pad — under the row */}
       {canSwipe && (
         <button
