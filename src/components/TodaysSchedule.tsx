@@ -707,13 +707,31 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     setTranslateX(next);
   };
   const onTouchEnd = () => {
-    if (!canSwipe) return;
-    if (translateX < -SWIPE_THRESHOLD) {
-      setTranslateX(-SWIPE_REVEAL);
-      setRevealed(true);
-    } else {
+    if (!canSwipe) {
+      startX.current = null;
+      startY.current = null;
+      return;
+    }
+    const wasSwiping = swiping.current;
+    if (wasSwiping) {
+      // End of an actual swipe gesture — snap to revealed or collapsed.
+      if (translateX < -SWIPE_THRESHOLD) {
+        setTranslateX(-SWIPE_REVEAL);
+        setRevealed(true);
+      } else {
+        setTranslateX(0);
+        setRevealed(false);
+      }
+    } else if (revealed) {
+      // It was a tap (no swipe motion) on a row that already had its swipe revealed.
+      // Treat as: collapse the swipe AND toggle expand in one tap.
+      // We handle it here because the synthesized click after touchend can be flaky
+      // when the underlying element has been transformed.
+      // eslint-disable-next-line no-console
+      console.log('[TodaysSchedule] tap on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
+      onToggleExpand();
     }
     startX.current = null;
     startY.current = null;
@@ -721,11 +739,15 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   const handleRowClick = () => {
-    // If swipe is revealed, collapse it AND proceed to expand the row in the same tap.
-    // Swipe and expand are mutually exclusive — only one surface visible at a time.
+    // If a touch sequence already handled this tap (revealed-collapse path), bail.
+    // For mouse/desktop clicks (no touch), this is the primary path.
     if (revealed) {
+      // eslint-disable-next-line no-console
+      console.log('[TodaysSchedule] click on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
+      onToggleExpand();
+      return;
     }
     onToggleExpand();
   };
