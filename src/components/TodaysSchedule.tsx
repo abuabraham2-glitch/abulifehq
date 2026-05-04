@@ -729,7 +729,6 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
       // We handle it here because the synthesized click after touchend can be flaky
       // when the underlying element has been transformed.
       // eslint-disable-next-line no-console
-      console.log('[TodaysSchedule] tap on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
       onToggleExpand();
@@ -748,8 +747,6 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     }
     // For mouse/desktop clicks (no touch), this is the primary path.
     if (revealed) {
-      // eslint-disable-next-line no-console
-      console.log('[TodaysSchedule] click on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
       onToggleExpand();
@@ -801,8 +798,6 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     const onDocPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
       const inside = !!rowRef.current && !!target && rowRef.current.contains(target);
-      // eslint-disable-next-line no-console
-      console.log('[TodaysSchedule] outside-tap check', { itemId: item.id, hasRef: !!rowRef.current, inside });
       if (!inside) {
         setTranslateX(0);
         setRevealed(false);
@@ -826,8 +821,9 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   return (
-    <div ref={setRefs} style={dragStyle} className="relative overflow-hidden rounded-md">
-      {/* Red delete pad — under the row */}
+    <div ref={setRefs} style={dragStyle} className="relative rounded-md">
+      <div className="relative overflow-hidden rounded-md">
+      {/* Red delete pad — under the row (only as tall as the row, never the expanded panel) */}
       {canSwipe && (
         <button
           onClick={handleDeleteClick}
@@ -912,6 +908,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
             onChange={onChangeDuration}
           />
         )}
+      </div>
       </div>
 
       {expanded && (
