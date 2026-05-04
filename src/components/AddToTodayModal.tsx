@@ -89,6 +89,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
           est_minutes: params.estMinutes,
           status: 'pending',
           is_calendar_event: false,
+          is_external: false,
           sort_order: maxSort + 1,
           local_only: params.localOnly,
         })

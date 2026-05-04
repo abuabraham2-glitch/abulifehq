@@ -656,9 +656,13 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
   const isExternal = item.is_external === true;
+  const isLocalOnly = item.local_only === true;
 
-  const canSwipe = !isExternal && !isActive;
-  const canDrag = !isExternal && !isActive && isPending;
+  // Quick-add (local_only) rows stay fully interactive even when they happen to be
+  // the next upcoming item — they are user-added, not part of the AI-locked plan.
+  const lockedActive = isActive && !isLocalOnly;
+  const canSwipe = !isExternal && !lockedActive;
+  const canDrag = !isExternal && !lockedActive && isPending;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -685,6 +689,8 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     if (!swiping.current) {
       if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
         swiping.current = true;
+        // Mutual exclusion: collapse any expanded panel before starting a swipe.
+        if (expanded) onToggleExpand();
       } else if (Math.abs(dy) > 10) {
         return;
       } else {
@@ -694,7 +700,8 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     const base = revealed ? -SWIPE_REVEAL : 0;
     let next = base + dx;
     if (next > 0) next = 0;
-    if (next < -SWIPE_REVEAL * 1.5) next = -SWIPE_REVEAL * 1.5;
+    // Clamp swipe travel to exactly the reveal width — never wider than the Delete button.
+    if (next < -SWIPE_REVEAL) next = -SWIPE_REVEAL;
     setTranslateX(next);
   };
   const onTouchEnd = () => {
@@ -732,6 +739,15 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
       setRevealed(false);
     }
   }, [isDragging, revealed]);
+
+  // Mutual exclusion the other direction: if the row gets expanded while swiped open,
+  // collapse the swipe state so only one interaction surface is visible.
+  useEffect(() => {
+    if (expanded && revealed) {
+      setTranslateX(0);
+      setRevealed(false);
+    }
+  }, [expanded, revealed]);
 
   let borderColor = '#eee';
   if (isActive) borderColor = '#E8A84C';
