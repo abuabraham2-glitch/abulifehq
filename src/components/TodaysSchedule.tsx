@@ -733,6 +733,8 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
       setTranslateX(0);
       setRevealed(false);
       onToggleExpand();
+      // Suppress the synthesized click that follows touchend so we don't double-toggle.
+      suppressNextClick.current = true;
     }
     startX.current = null;
     startY.current = null;
