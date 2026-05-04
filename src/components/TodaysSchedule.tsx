@@ -98,10 +98,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     return [...(planItems ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time));
   }, [planItems]);
 
-  // Timeline render excludes pushed rows (skipped → Tomorrow, deferred → future date).
-  // Pushed rows still exist in DB and surface in the "Pushed today" section.
+  // Timeline render shows ONLY pending/in_progress rows. Completed/skipped/deferred
+  // rows are excluded entirely (Pushed today section surfaces skipped/deferred separately).
+  // Note: pendingComplete rows still pass this filter because the DB row's status is
+  // still 'pending' during the 5s undo window — only the displayed status is overridden.
   const visibleItems = useMemo(
-    () => sortedItems.filter((i) => i.status !== 'skipped' && i.status !== 'deferred'),
+    () => sortedItems.filter((i) => i.status !== 'skipped' && i.status !== 'deferred' && i.status !== 'completed'),
     [sortedItems],
   );
 
@@ -719,10 +721,11 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   const handleRowClick = () => {
+    // If swipe is revealed, collapse it AND proceed to expand the row in the same tap.
+    // Swipe and expand are mutually exclusive — only one surface visible at a time.
     if (revealed) {
       setTranslateX(0);
       setRevealed(false);
-      return;
     }
     onToggleExpand();
   };
@@ -749,6 +752,31 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     }
   }, [expanded, revealed]);
 
+  // If the row's status changes (completion timer fires, push fires, etc.), clear any
+  // active swipe state so we don't leave a Delete pad showing on a row that's about
+  // to vanish from the timeline.
+  useEffect(() => {
+    if (revealed && (isCompleted || isSkipped || item.status === 'deferred')) {
+      setTranslateX(0);
+      setRevealed(false);
+    }
+  }, [item.status, isCompleted, isSkipped, revealed]);
+
+  // Outside-tap dismiss: tapping anywhere outside this row resets its swipe state.
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!revealed) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (rowRef.current && target && !rowRef.current.contains(target)) {
+        setTranslateX(0);
+        setRevealed(false);
+      }
+    };
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [revealed]);
+
   let borderColor = '#eee';
   if (isActive) borderColor = '#E8A84C';
   else if (isCompleted || isSkipped) borderColor = '#ddd';
@@ -762,7 +790,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   return (
-    <div ref={setNodeRef} style={dragStyle} className="relative overflow-hidden rounded-md">
+    <div ref={(el) => { setNodeRef(el); rowRef.current = el; }} style={dragStyle} className="relative overflow-hidden rounded-md">
       {/* Red delete pad — under the row */}
       {canSwipe && (
         <button
