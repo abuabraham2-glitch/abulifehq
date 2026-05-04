@@ -677,6 +677,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const swiping = useRef(false);
+  const suppressNextClick = useRef(false);
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (!canSwipe) return;
