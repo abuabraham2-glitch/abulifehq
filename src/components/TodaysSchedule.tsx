@@ -909,6 +909,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           />
         )}
       </div>
+      </div>
 
       {expanded && (
         <div className="ml-3 mb-2 p-3 rounded-lg" style={{ backgroundColor: '#FFF8F0', border: '1px solid #E8D5B8' }}>
