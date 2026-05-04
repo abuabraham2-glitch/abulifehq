@@ -677,6 +677,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   const startX = useRef<number | null>(null);
   const startY = useRef<number | null>(null);
   const swiping = useRef(false);
+  const suppressNextClick = useRef(false);
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (!canSwipe) return;
@@ -707,13 +708,33 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     setTranslateX(next);
   };
   const onTouchEnd = () => {
-    if (!canSwipe) return;
-    if (translateX < -SWIPE_THRESHOLD) {
-      setTranslateX(-SWIPE_REVEAL);
-      setRevealed(true);
-    } else {
+    if (!canSwipe) {
+      startX.current = null;
+      startY.current = null;
+      return;
+    }
+    const wasSwiping = swiping.current;
+    if (wasSwiping) {
+      // End of an actual swipe gesture — snap to revealed or collapsed.
+      if (translateX < -SWIPE_THRESHOLD) {
+        setTranslateX(-SWIPE_REVEAL);
+        setRevealed(true);
+      } else {
+        setTranslateX(0);
+        setRevealed(false);
+      }
+    } else if (revealed) {
+      // It was a tap (no swipe motion) on a row that already had its swipe revealed.
+      // Treat as: collapse the swipe AND toggle expand in one tap.
+      // We handle it here because the synthesized click after touchend can be flaky
+      // when the underlying element has been transformed.
+      // eslint-disable-next-line no-console
+      console.log('[TodaysSchedule] tap on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
+      onToggleExpand();
+      // Suppress the synthesized click that follows touchend so we don't double-toggle.
+      suppressNextClick.current = true;
     }
     startX.current = null;
     startY.current = null;
@@ -721,11 +742,18 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   const handleRowClick = () => {
-    // If swipe is revealed, collapse it AND proceed to expand the row in the same tap.
-    // Swipe and expand are mutually exclusive — only one surface visible at a time.
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      return;
+    }
+    // For mouse/desktop clicks (no touch), this is the primary path.
     if (revealed) {
+      // eslint-disable-next-line no-console
+      console.log('[TodaysSchedule] click on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
+      onToggleExpand();
+      return;
     }
     onToggleExpand();
   };
@@ -764,18 +792,26 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
 
   // Outside-tap dismiss: tapping anywhere outside this row resets its swipe state.
   const rowRef = useRef<HTMLDivElement | null>(null);
+  const setRefs = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    rowRef.current = el;
+  };
   useEffect(() => {
     if (!revealed) return;
     const onDocPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
-      if (rowRef.current && target && !rowRef.current.contains(target)) {
+      const inside = !!rowRef.current && !!target && rowRef.current.contains(target);
+      // eslint-disable-next-line no-console
+      console.log('[TodaysSchedule] outside-tap check', { itemId: item.id, hasRef: !!rowRef.current, inside });
+      if (!inside) {
         setTranslateX(0);
         setRevealed(false);
       }
     };
-    document.addEventListener('pointerdown', onDocPointerDown);
-    return () => document.removeEventListener('pointerdown', onDocPointerDown);
-  }, [revealed]);
+    // Use capture so we run before any handler that might stopPropagation.
+    document.addEventListener('pointerdown', onDocPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown, true);
+  }, [revealed, item.id]);
 
   let borderColor = '#eee';
   if (isActive) borderColor = '#E8A84C';
@@ -790,7 +826,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   return (
-    <div ref={(el) => { setNodeRef(el); rowRef.current = el; }} style={dragStyle} className="relative overflow-hidden rounded-md">
+    <div ref={setRefs} style={dragStyle} className="relative overflow-hidden rounded-md">
       {/* Red delete pad — under the row */}
       {canSwipe && (
         <button
@@ -893,6 +929,14 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
               </button>
               <button onClick={onDone} className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]" style={{ backgroundColor: '#059669' }}>
                 ✓ Done
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]"
+                style={{ backgroundColor: '#C44' }}
+                aria-label="Delete task"
+              >
+                Delete
               </button>
             </div>
           )}
