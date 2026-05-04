@@ -729,7 +729,6 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
       // We handle it here because the synthesized click after touchend can be flaky
       // when the underlying element has been transformed.
       // eslint-disable-next-line no-console
-      console.log('[TodaysSchedule] tap on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
       onToggleExpand();
