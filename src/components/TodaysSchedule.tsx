@@ -798,8 +798,6 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     const onDocPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
       const inside = !!rowRef.current && !!target && rowRef.current.contains(target);
-      // eslint-disable-next-line no-console
-      console.log('[TodaysSchedule] outside-tap check', { itemId: item.id, hasRef: !!rowRef.current, inside });
       if (!inside) {
         setTranslateX(0);
         setRevealed(false);
