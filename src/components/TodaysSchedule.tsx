@@ -656,9 +656,13 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
   const isExternal = item.is_external === true;
+  const isLocalOnly = item.local_only === true;
 
-  const canSwipe = !isExternal && !isActive;
-  const canDrag = !isExternal && !isActive && isPending;
+  // Quick-add (local_only) rows stay fully interactive even when they happen to be
+  // the next upcoming item — they are user-added, not part of the AI-locked plan.
+  const lockedActive = isActive && !isLocalOnly;
+  const canSwipe = !isExternal && !lockedActive;
+  const canDrag = !isExternal && !lockedActive && isPending;
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
