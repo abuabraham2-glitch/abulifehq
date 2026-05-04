@@ -742,7 +742,10 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   const handleRowClick = () => {
-    // If a touch sequence already handled this tap (revealed-collapse path), bail.
+    if (suppressNextClick.current) {
+      suppressNextClick.current = false;
+      return;
+    }
     // For mouse/desktop clicks (no touch), this is the primary path.
     if (revealed) {
       // eslint-disable-next-line no-console
