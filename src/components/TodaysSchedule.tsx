@@ -747,8 +747,6 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
     }
     // For mouse/desktop clicks (no touch), this is the primary path.
     if (revealed) {
-      // eslint-disable-next-line no-console
-      console.log('[TodaysSchedule] click on revealed row → collapse + toggle expand', item.id);
       setTranslateX(0);
       setRevealed(false);
       onToggleExpand();
