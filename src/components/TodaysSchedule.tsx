@@ -792,18 +792,26 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
 
   // Outside-tap dismiss: tapping anywhere outside this row resets its swipe state.
   const rowRef = useRef<HTMLDivElement | null>(null);
+  const setRefs = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    rowRef.current = el;
+  };
   useEffect(() => {
     if (!revealed) return;
     const onDocPointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
-      if (rowRef.current && target && !rowRef.current.contains(target)) {
+      const inside = !!rowRef.current && !!target && rowRef.current.contains(target);
+      // eslint-disable-next-line no-console
+      console.log('[TodaysSchedule] outside-tap check', { itemId: item.id, hasRef: !!rowRef.current, inside });
+      if (!inside) {
         setTranslateX(0);
         setRevealed(false);
       }
     };
-    document.addEventListener('pointerdown', onDocPointerDown);
-    return () => document.removeEventListener('pointerdown', onDocPointerDown);
-  }, [revealed]);
+    // Use capture so we run before any handler that might stopPropagation.
+    document.addEventListener('pointerdown', onDocPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown, true);
+  }, [revealed, item.id]);
 
   let borderColor = '#eee';
   if (isActive) borderColor = '#E8A84C';
