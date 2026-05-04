@@ -721,10 +721,11 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   const handleRowClick = () => {
+    // If swipe is revealed, collapse it AND proceed to expand the row in the same tap.
+    // Swipe and expand are mutually exclusive — only one surface visible at a time.
     if (revealed) {
       setTranslateX(0);
       setRevealed(false);
-      return;
     }
     onToggleExpand();
   };
@@ -750,6 +751,31 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
       setRevealed(false);
     }
   }, [expanded, revealed]);
+
+  // If the row's status changes (completion timer fires, push fires, etc.), clear any
+  // active swipe state so we don't leave a Delete pad showing on a row that's about
+  // to vanish from the timeline.
+  useEffect(() => {
+    if (revealed && (isCompleted || isSkipped || item.status === 'deferred')) {
+      setTranslateX(0);
+      setRevealed(false);
+    }
+  }, [item.status, isCompleted, isSkipped, revealed]);
+
+  // Outside-tap dismiss: tapping anywhere outside this row resets its swipe state.
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!revealed) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      if (rowRef.current && target && !rowRef.current.contains(target)) {
+        setTranslateX(0);
+        setRevealed(false);
+      }
+    };
+    document.addEventListener('pointerdown', onDocPointerDown);
+    return () => document.removeEventListener('pointerdown', onDocPointerDown);
+  }, [revealed]);
 
   let borderColor = '#eee';
   if (isActive) borderColor = '#E8A84C';
