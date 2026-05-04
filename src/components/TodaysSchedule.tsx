@@ -930,6 +930,14 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
               <button onClick={onDone} className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]" style={{ backgroundColor: '#059669' }}>
                 ✓ Done
               </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]"
+                style={{ backgroundColor: '#C44' }}
+                aria-label="Delete task"
+              >
+                Delete
+              </button>
             </div>
           )}
           {isSkipped && (
