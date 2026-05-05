@@ -212,6 +212,7 @@ export type Database = {
           status: string | null
           task_id: string | null
           title: string
+          updated_at: string | null
         }
         Insert: {
           actual_minutes?: number | null
@@ -232,6 +233,7 @@ export type Database = {
           status?: string | null
           task_id?: string | null
           title: string
+          updated_at?: string | null
         }
         Update: {
           actual_minutes?: number | null
@@ -252,6 +254,7 @@ export type Database = {
           status?: string | null
           task_id?: string | null
           title?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
