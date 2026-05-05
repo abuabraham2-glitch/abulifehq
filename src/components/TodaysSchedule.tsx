@@ -241,7 +241,60 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
     toast(`Duration updated · ${newMinutes}m`, { duration: 3000 });
   };
 
-  // ===== Swipe-to-delete with undo =====
+  // Build locked windows for StartTimePicker chip exclusion: every external (calendar) item
+  // becomes a window. Routine + pickup windows are added inside the picker itself.
+  const lockedWindows = useMemo<LockedWindow[]>(() => {
+    return sortedItems
+      .filter((i) => i.is_external)
+      .map((i) => ({ startMin: timeToMin(i.start_time), endMin: timeToMin(i.end_time) }));
+  }, [sortedItems]);
+
+  const handleStartTimeChange = async (item: PlanItem, newTime24: string) => {
+    // Build "move [title] to [HH:MM AM/PM]" — same string a user would type into the chat box.
+    const command = `move ${item.title} to ${formatTime12h(newTime24)}`;
+    // eslint-disable-next-line no-console
+    console.warn('[time-edit] submitting command=', command);
+    const tid = toast.loading('Updating plan…');
+    try {
+      const res = await fetch(REVISION_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: command,
+          target_date: 'today',
+          planId: null,
+          currentItems: (planItems ?? []).map((p) => ({
+            id: p.id,
+            title: p.title,
+            start_time: p.start_time,
+            end_time: p.end_time,
+            category: p.category,
+            status: p.status,
+            est_minutes: p.est_minutes,
+            actual_minutes: p.actual_minutes,
+            is_calendar_event: p.is_calendar_event,
+            task_id: p.task_id,
+          })),
+        }),
+      });
+      const rawText = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(rawText); } catch {
+        const s = rawText.search(/[\{\[]/);
+        const e = rawText.lastIndexOf(s !== -1 && rawText[s] === '[' ? ']' : '}');
+        if (s !== -1 && e !== -1) data = JSON.parse(rawText.substring(s, e + 1));
+      }
+      // eslint-disable-next-line no-console
+      console.warn('[time-edit] revision flow response received');
+      const msg = data?.message || 'Plan updated';
+      toast.dismiss(tid);
+      toast(msg);
+      queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    } catch (err) {
+      toast.dismiss(tid);
+      toast.error('Could not reach the server.');
+    }
+  };
   const requestDelete = (item: PlanItem) => {
     if (item.calendar_event_id) {
       setConfirmDeleteItem(item);
