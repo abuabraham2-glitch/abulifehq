@@ -705,12 +705,14 @@ interface RowProps {
   outOfSync: boolean;
   overlaps: boolean;
   onChangeDuration: (m: number) => void;
+  onChangeStartTime: (newTime24: string) => void;
+  lockedWindows: LockedWindow[];
 }
 
 const SWIPE_REVEAL = 80;
 const SWIPE_THRESHOLD = 40;
 
-function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration }: RowProps) {
+function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration, onChangeStartTime, lockedWindows }: RowProps) {
   const isCompleted = item.status === 'completed';
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
