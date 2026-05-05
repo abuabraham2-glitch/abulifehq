@@ -565,6 +565,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
                   outOfSync={outOfSyncIds.has(item.id)}
                   overlaps={overlapIds.has(item.id)}
                   onChangeDuration={(m) => handleDurationChange(item, m)}
+                  onChangeStartTime={(t) => handleStartTimeChange(item, t)}
+                  lockedWindows={lockedWindows}
                 />
               );
             })}
