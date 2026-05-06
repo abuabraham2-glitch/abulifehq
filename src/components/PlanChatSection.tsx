@@ -3,6 +3,7 @@ import { Send, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import type { PlanItem } from '@/hooks/useDailyPlan';
+import { submitPlanRevision } from '@/lib/planRevision';
 
 interface ChatMessage {
   role: 'user' | 'ai';
