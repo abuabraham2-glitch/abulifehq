@@ -41,6 +41,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { timeToMin, minToTime, pacificIso } from '@/lib/planScheduling';
 import { DurationPicker } from '@/components/DurationPicker';
+import { StartTimePicker, getStaticLockedWindows } from '@/components/StartTimePicker';
+import { submitPlanRevision } from '@/lib/planRevision';
 
 const SKIP_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event';
 const UPDATE_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event';
@@ -63,9 +65,10 @@ interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
   addButton?: React.ReactNode;
+  planId?: string | null;
 }
 
-export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) {
+export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = null }: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
@@ -237,6 +240,44 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
       }).catch(() => {});
     }
     toast(`Duration updated · ${newMinutes}m`, { duration: 3000 });
+  };
+
+  // Locked windows for the start-time picker: static weekday rules + each
+  // external (real Google Calendar) row's window. Computed in minutes since midnight.
+  const lockedWindows = useMemo(() => {
+    const wins = getStaticLockedWindows();
+    for (const it of sortedItems) {
+      if (it.is_external) {
+        wins.push({ startMin: timeToMin(it.start_time), endMin: timeToMin(it.end_time) });
+      }
+    }
+    return wins;
+  }, [sortedItems]);
+
+  const handleTimeEdit = async (item: PlanItem, newTime24: string) => {
+    const command = `move ${item.title} to ${formatTime12h(newTime24)}`;
+    console.warn('[time-edit] submitting command=', command);
+    const toastId = toast.loading('Updating plan…', {
+      style: { background: '#5C3D1E', color: '#fff', border: 'none' },
+    });
+    try {
+      const res = await submitPlanRevision({
+        message: command,
+        planId,
+        planItems: planItems ?? [],
+        viewTomorrow: false,
+      });
+      console.warn('[time-edit] revision flow response received');
+      if (res.action === 'revision') {
+        queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+        toast.success(res.message || 'Plan updated', { id: toastId });
+      } else {
+        toast(res.message || 'Done', { id: toastId });
+      }
+    } catch (e) {
+      console.error('[time-edit] revision flow error', e);
+      toast.error('Could not reach the server.', { id: toastId });
+    }
   };
 
   // ===== Swipe-to-delete with undo =====
@@ -510,6 +551,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) 
                   outOfSync={outOfSyncIds.has(item.id)}
                   overlaps={overlapIds.has(item.id)}
                   onChangeDuration={(m) => handleDurationChange(item, m)}
+                  lockedWindows={lockedWindows}
+                  onChangeStartTime={(t) => handleTimeEdit(item, t)}
                 />
               );
             })}
@@ -648,12 +691,14 @@ interface RowProps {
   outOfSync: boolean;
   overlaps: boolean;
   onChangeDuration: (m: number) => void;
+  lockedWindows: { startMin: number; endMin: number }[];
+  onChangeStartTime: (newTime24: string) => void;
 }
 
 const SWIPE_REVEAL = 80;
 const SWIPE_THRESHOLD = 40;
 
-function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration }: RowProps) {
+function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration, lockedWindows, onChangeStartTime }: RowProps) {
   const isCompleted = item.status === 'completed';
   const isSkipped = item.status === 'skipped';
   const isPending = !isCompleted && !isSkipped;
@@ -876,9 +921,15 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
         )}
 
-        <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1" style={isExternal ? { color: '#3B82F6' } : {}}>
-          {formatTime12h(item.start_time)}
-        </span>
+        <StartTimePicker
+          rowId={item.id}
+          value={item.start_time}
+          lockedWindows={lockedWindows}
+          disabled={isExternal || lockedActive || !isPending}
+          onPick={(t) => onChangeStartTime(t)}
+          className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1 text-left"
+          style={isExternal ? { color: '#3B82F6' } : undefined}
+        />
 
         <span
           className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${isSkipped ? 'line-through' : ''}`}

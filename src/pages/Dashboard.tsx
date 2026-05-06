@@ -117,6 +117,7 @@ export default function Dashboard() {
           <TodaysSchedule
             viewTomorrow={viewTomorrow}
             onToggleTab={() => setViewTomorrow(!viewTomorrow)}
+            planId={plan?.id ?? null}
             addButton={
               !viewTomorrow ? (
                 <button
