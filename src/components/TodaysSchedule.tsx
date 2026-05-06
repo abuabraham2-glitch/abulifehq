@@ -551,6 +551,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
                   outOfSync={outOfSyncIds.has(item.id)}
                   overlaps={overlapIds.has(item.id)}
                   onChangeDuration={(m) => handleDurationChange(item, m)}
+                  lockedWindows={lockedWindows}
+                  onChangeStartTime={(t) => handleTimeEdit(item, t)}
                 />
               );
             })}
