@@ -41,6 +41,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { timeToMin, minToTime, pacificIso } from '@/lib/planScheduling';
 import { DurationPicker } from '@/components/DurationPicker';
+import { StartTimePicker, getStaticLockedWindows } from '@/components/StartTimePicker';
+import { submitPlanRevision } from '@/lib/planRevision';
 
 const SKIP_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event';
 const UPDATE_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event';
@@ -63,9 +65,10 @@ interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
   addButton?: React.ReactNode;
+  planId?: string | null;
 }
 
-export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton }: Props) {
+export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = null }: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
