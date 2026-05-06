@@ -31,57 +31,21 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
     const text = input.trim();
     if (!text || loading) return;
 
-    // Prepend "tomorrow: " when viewing tomorrow's tab
-    const messageToSend = viewTomorrow ? `tomorrow: ${text}` : text;
-
     setMessages((prev) => [...prev, { role: 'user', text }]);
     setInput('');
     setLoading(true);
 
     try {
-      const targetDate = viewTomorrow ? 'tomorrow' : 'today';
-      const res = await fetch('https://bottlesandprint.app.n8n.cloud/webhook/life-hq-revision', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageToSend,
-          target_date: targetDate,
-          planId,
-          currentItems: (currentPlanItems ?? []).map((item) => ({
-            id: item.id,
-            title: item.title,
-            start_time: item.start_time,
-            end_time: item.end_time,
-            category: item.category,
-            status: item.status,
-            est_minutes: item.est_minutes,
-            actual_minutes: item.actual_minutes,
-            is_calendar_event: item.is_calendar_event,
-            task_id: item.task_id,
-          })),
-        }),
+      const data = await submitPlanRevision({
+        message: text,
+        planId,
+        planItems: currentPlanItems ?? [],
+        viewTomorrow,
       });
-      const rawText = await res.text();
-      console.log('Raw webhook response:', rawText);
-
-      let data: any;
-      try {
-        data = JSON.parse(rawText);
-      } catch {
-        const jsonStart = rawText.search(/[\{\[]/);
-        const jsonEnd = rawText.lastIndexOf(jsonStart !== -1 && rawText[jsonStart] === '[' ? ']' : '}');
-        if (jsonStart !== -1 && jsonEnd !== -1) {
-          data = JSON.parse(rawText.substring(jsonStart, jsonEnd + 1));
-        } else {
-          throw new Error('Could not parse response');
-        }
-      }
-      console.log('Parsed webhook response:', data);
-
-      const msg = data.message || 'Done.';
+      const msg = data.message;
 
       if (data.action === 'revision') {
-        if (!data || (typeof data !== 'object') || msg === '') {
+        if (!msg) {
           setMessages((prev) => [...prev, { role: 'ai', text: 'Something went wrong, your plan was not changed.' }]);
           toast({ title: 'Something went wrong, your plan was not changed.', variant: 'destructive' });
         } else {
@@ -89,8 +53,6 @@ export function PlanChatSection({ planId, planItems: currentPlanItems, viewTomor
           toast({ title: msg });
           queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
         }
-      } else if (data.action === 'answer') {
-        setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
       } else {
         setMessages((prev) => [...prev, { role: 'ai', text: msg }]);
       }
