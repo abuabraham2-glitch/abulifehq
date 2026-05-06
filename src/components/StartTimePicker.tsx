@@ -62,7 +62,7 @@ export function StartTimePicker({ value, lockedWindows, disabled, onPick, classN
     const nowMin = pacificNowMin();
     // Start at next round hour at-or-after now.
     const startHour = nowMin % 60 === 0 ? Math.floor(nowMin / 60) : Math.floor(nowMin / 60) + 1;
-    const endHour = 19; // 7 PM cap (inclusive)
+    const endHour = 22; // 10 PM cap (inclusive)
     const out: number[] = [];
     for (let h = startHour; h <= endHour; h++) {
       const hMin = h * 60;
@@ -81,21 +81,25 @@ export function StartTimePicker({ value, lockedWindows, disabled, onPick, classN
   };
 
   const openCustom = () => {
+    console.warn('[time-edit] custom button clicked — entering openCustom');
     const el = customInputRef.current;
-    if (!el) return;
     // Set default to current value (HH:MM)
-    el.value = value.slice(0, 5);
+    if (el) el.value = value.slice(0, 5);
+    console.warn('[time-edit] hidden input ref=', el, 'showPicker available=', typeof (el as any)?.showPicker);
+    if (!el) return;
     // Try the modern API first (Chromium supports showPicker on time inputs).
     try {
       // @ts-ignore
       if (typeof el.showPicker === 'function') el.showPicker();
       else el.click();
     } catch {
+      console.warn('[time-edit] showPicker threw or fell back to click');
       el.click();
     }
   };
 
   const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.warn('[time-edit] handleCustomChange fired with value=', e.target.value);
     const v = e.target.value; // "HH:MM"
     if (!v) return;
     const t = `${v}:00`;
@@ -161,7 +165,10 @@ export function StartTimePicker({ value, lockedWindows, disabled, onPick, classN
             </p>
           )}
           <button
-            onClick={openCustom}
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); openCustom(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             className="w-full px-2.5 py-1.5 rounded-lg text-[12px] font-medium border min-h-[34px]"
             style={{ borderColor: '#B8906C', color: '#5C3D1E' }}
           >
@@ -177,7 +184,7 @@ export function StartTimePicker({ value, lockedWindows, disabled, onPick, classN
         type="time"
         defaultValue={value.slice(0, 5)}
         onChange={handleCustomChange}
-        style={{ position: 'absolute', width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
+        style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none' }}
         tabIndex={-1}
         aria-hidden="true"
       />
