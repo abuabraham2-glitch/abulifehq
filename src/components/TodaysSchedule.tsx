@@ -921,9 +921,15 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
         )}
 
-        <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1" style={isExternal ? { color: '#3B82F6' } : {}}>
-          {formatTime12h(item.start_time)}
-        </span>
+        <StartTimePicker
+          rowId={item.id}
+          value={item.start_time}
+          lockedWindows={lockedWindows}
+          disabled={isExternal || lockedActive || !isPending}
+          onPick={(t) => onChangeStartTime(t)}
+          className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1 text-left"
+          style={isExternal ? { color: '#3B82F6' } : undefined}
+        />
 
         <span
           className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${isSkipped ? 'line-through' : ''}`}
