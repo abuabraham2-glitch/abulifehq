@@ -242,6 +242,44 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     toast(`Duration updated · ${newMinutes}m`, { duration: 3000 });
   };
 
+  // Locked windows for the start-time picker: static weekday rules + each
+  // external (real Google Calendar) row's window. Computed in minutes since midnight.
+  const lockedWindows = useMemo(() => {
+    const wins = getStaticLockedWindows();
+    for (const it of sortedItems) {
+      if (it.is_external) {
+        wins.push({ startMin: timeToMin(it.start_time), endMin: timeToMin(it.end_time) });
+      }
+    }
+    return wins;
+  }, [sortedItems]);
+
+  const handleTimeEdit = async (item: PlanItem, newTime24: string) => {
+    const command = `move ${item.title} to ${formatTime12h(newTime24)}`;
+    console.warn('[time-edit] submitting command=', command);
+    const toastId = toast.loading('Updating plan…', {
+      style: { background: '#5C3D1E', color: '#fff', border: 'none' },
+    });
+    try {
+      const res = await submitPlanRevision({
+        message: command,
+        planId,
+        planItems: planItems ?? [],
+        viewTomorrow: false,
+      });
+      console.warn('[time-edit] revision flow response received');
+      if (res.action === 'revision') {
+        queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+        toast.success(res.message || 'Plan updated', { id: toastId });
+      } else {
+        toast(res.message || 'Done', { id: toastId });
+      }
+    } catch (e) {
+      console.error('[time-edit] revision flow error', e);
+      toast.error('Could not reach the server.', { id: toastId });
+    }
+  };
+
   // ===== Swipe-to-delete with undo =====
   const requestDelete = (item: PlanItem) => {
     if (item.calendar_event_id) {
