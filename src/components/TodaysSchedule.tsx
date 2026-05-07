@@ -410,6 +410,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         sort_order: i,
       });
       cursor = end;
+      console.warn('[drag-reorder] placed', item.title, 'at', minToTime(start), '-', minToTime(end));
     }
 
     // Optimistically update cache to feel instant
