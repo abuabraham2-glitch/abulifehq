@@ -380,10 +380,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       const dur = (item.est_minutes ?? Math.max(15, timeToMin(item.end_time) - timeToMin(item.start_time))) || 30;
 
       if (item.is_external) {
-        // Keep its original times, advance cursor past it
+        // Keep its original times, advance cursor past it.
+        // Do NOT manually advance anchorIdx — the while-loop on the next non-external
+        // iteration handles that, and now that anchors[] also contains blocked windows,
+        // a manual increment would skip past a blocked window incorrectly.
         cursor = Math.max(cursor, timeToMin(item.end_time));
-        anchorIdx++;
-        // sort_order still updated to reflect placement
         updates.push({
           id: item.id,
           start_time: item.start_time,
