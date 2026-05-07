@@ -346,12 +346,33 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     // Recalculate sequential start/end times preserving each item's duration.
     // Walk through `reordered`. External calendar events stay anchored to their original times.
     // For non-external items, slot them into gaps between anchors starting at max(prev_end, now).
-    const anchors = sortedItems.filter((i) => i.is_external)
-      .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }))
+    const realAnchors = sortedItems.filter((i) => i.is_external)
+      .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }));
+    const blockedAnchors = getStaticLockedWindows().map((w, idx) => ({
+      id: '_blocked_' + idx,
+      start: w.startMin,
+      end: w.endMin,
+    }));
+    const anchors = [...realAnchors, ...blockedAnchors]
       .sort((a, b) => a.start - b.start);
+    console.warn('[drag-reorder] anchors=', anchors);
 
     const updates: { id: string; start_time: string; end_time: string; sort_order: number }[] = [];
     let cursor = Math.max(timeToMin(nowTime), 6 * 60);
+    // If cursor lands inside any anchor (blocked window or external event), push it past.
+    // Loop because pushing past one anchor could land inside another adjacent anchor.
+    let pushed = true;
+    while (pushed) {
+      pushed = false;
+      for (const a of anchors) {
+        if (cursor >= a.start && cursor < a.end) {
+          cursor = a.end;
+          pushed = true;
+          break;
+        }
+      }
+    }
+    console.warn('[drag-reorder] cursor start after block-skip=', cursor);
     let anchorIdx = 0;
 
     for (let i = 0; i < reordered.length; i++) {
@@ -359,10 +380,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       const dur = (item.est_minutes ?? Math.max(15, timeToMin(item.end_time) - timeToMin(item.start_time))) || 30;
 
       if (item.is_external) {
-        // Keep its original times, advance cursor past it
+        // Keep its original times, advance cursor past it.
+        // Do NOT manually advance anchorIdx — the while-loop on the next non-external
+        // iteration handles that, and now that anchors[] also contains blocked windows,
+        // a manual increment would skip past a blocked window incorrectly.
         cursor = Math.max(cursor, timeToMin(item.end_time));
-        anchorIdx++;
-        // sort_order still updated to reflect placement
         updates.push({
           id: item.id,
           start_time: item.start_time,
@@ -388,6 +410,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         sort_order: i,
       });
       cursor = end;
+      console.warn('[drag-reorder] placed', item.title, 'at', minToTime(start), '-', minToTime(end));
     }
 
     // Optimistically update cache to feel instant
