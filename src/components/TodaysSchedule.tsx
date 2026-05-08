@@ -61,6 +61,17 @@ function formatDateStr(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
+// Strip trailing suffixes appended by the planner (e.g. " — URGENT",
+// " - PRIORITY", " (urgent)") so we can match a plan_item title back to
+// a row in `tasks` by name.
+function stripTitleSuffix(title: string): string {
+  if (!title) return '';
+  let t = title;
+  t = t.replace(/\s+[—–-]\s+[^—–-]+$/, '');
+  t = t.replace(/\s*\([^)]*\)\s*$/, '');
+  return t.trim();
+}
+
 interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
