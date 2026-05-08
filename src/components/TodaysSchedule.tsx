@@ -169,7 +169,23 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         return next;
       });
       await updatePlanItem.mutateAsync({ id: item.id, status: 'completed', actual_minutes: duration });
-      if (item.task_id) await completeTask.mutateAsync(item.task_id);
+      if (item.task_id) {
+        await completeTask.mutateAsync(item.task_id);
+        console.warn('done-delete-fix: tasks updated to completed for task_id', item.task_id);
+      } else {
+        const titleKey = stripTitleSuffix(item.title);
+        const { data: matches } = await supabase
+          .from('tasks')
+          .select('id,name')
+          .ilike('name', titleKey);
+        if (matches && matches.length > 0) {
+          await supabase
+            .from('tasks')
+            .update({ status: 'completed', completed_at: new Date().toISOString() })
+            .in('id', matches.map((m: any) => m.id));
+          console.warn('done-delete-fix: tasks updated by title fallback:', titleKey);
+        }
+      }
       fireSkipWebhook(item);
     }, 5000);
 
