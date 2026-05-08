@@ -306,11 +306,36 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   };
 
   const performDelete = async (item: PlanItem) => {
-    // Snapshot for undo
+    console.warn('done-delete-fix: performDelete called for item', item.id, item.title);
     const snapshot = { ...item };
-    await supabase.from('plan_items').delete().eq('id', item.id);
+
+    // Soft-delete: mark plan_items as skipped (instead of hard delete) so the AI
+    // doesn't re-plan it tomorrow.
+    await supabase.from('plan_items').update({ status: 'skipped' }).eq('id', item.id);
+    console.warn('done-delete-fix: plan_items updated to skipped for', item.id);
+
+    // Archive the underlying task so it stops appearing in future plans.
+    let archivedTaskIds: string[] = [];
+    if (item.task_id) {
+      await supabase.from('tasks').update({ status: 'archived' }).eq('id', item.task_id);
+      archivedTaskIds = [item.task_id];
+      console.warn('done-delete-fix: tasks updated to archived for task_id', item.task_id);
+    } else {
+      const titleKey = stripTitleSuffix(item.title);
+      const { data: matches } = await supabase
+        .from('tasks')
+        .select('id')
+        .ilike('name', titleKey);
+      if (matches && matches.length > 0) {
+        archivedTaskIds = matches.map((m: any) => m.id);
+        await supabase.from('tasks').update({ status: 'archived' }).in('id', archivedTaskIds);
+        console.warn('done-delete-fix: tasks updated by title fallback:', titleKey);
+      }
+    }
+
     if (item.calendar_event_id) fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
 
     const hadCalendar = !!item.calendar_event_id;
     toast(`Deleted: ${item.title}`, {
@@ -319,10 +344,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       action: {
         label: 'Undo',
         onClick: async () => {
-          // Re-insert (without calendar_event_id since that event is gone)
-          const { id, created_at, calendar_event_id, ...rest } = snapshot as any;
-          await supabase.from('plan_items').insert({ ...rest, id });
+          await supabase.from('plan_items').update({ status: 'pending' }).eq('id', item.id);
+          if (archivedTaskIds.length > 0) {
+            await supabase.from('tasks').update({ status: 'active' }).in('id', archivedTaskIds);
+          }
           queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+          queryClient.invalidateQueries({ queryKey: ['tasks'] });
         },
       },
     });
