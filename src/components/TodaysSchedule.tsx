@@ -95,6 +95,20 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // Collapse expanded row when tapping outside it (ignores Radix popovers/dialogs/toasts).
+  useEffect(() => {
+    if (!expandedId) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest(`[data-row-id="${expandedId}"]`)) return;
+      if (target.closest('[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"], [data-sonner-toaster], [data-radix-portal]')) return;
+      setExpandedId(null);
+    };
+    document.addEventListener('pointerdown', handler, true);
+    return () => document.removeEventListener('pointerdown', handler, true);
+  }, [expandedId]);
   const [pushItem, setPushItem] = useState<PlanItem | null>(null);
   const [pickDateOpen, setPickDateOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
@@ -943,7 +957,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   };
 
   return (
-    <div ref={setRefs} style={dragStyle} className="relative rounded-md">
+    <div ref={setRefs} style={dragStyle} className="relative rounded-md" data-row-id={item.id}>
       <div className="relative overflow-hidden rounded-md">
       {/* Red delete pad — under the row (only as tall as the row, never the expanded panel) */}
       {canSwipe && (
