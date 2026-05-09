@@ -67,6 +67,7 @@ export type Database = {
           tasks_planned: number | null
           total_actual_minutes: number | null
           total_planned_minutes: number | null
+          updated_at: string | null
         }
         Insert: {
           ai_notes?: string | null
@@ -82,6 +83,7 @@ export type Database = {
           tasks_planned?: number | null
           total_actual_minutes?: number | null
           total_planned_minutes?: number | null
+          updated_at?: string | null
         }
         Update: {
           ai_notes?: string | null
@@ -97,6 +99,7 @@ export type Database = {
           tasks_planned?: number | null
           total_actual_minutes?: number | null
           total_planned_minutes?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
