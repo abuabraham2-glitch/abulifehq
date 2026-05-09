@@ -508,6 +508,58 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
           .eq('id', u.id),
       ),
     );
+
+    // Sync moved calendar events instantly via n8n webhook
+    const calendarUpdates = updates
+      .map((u) => ({ u, orig: sortedItems.find((s) => s.id === u.id)! }))
+      .filter(
+        ({ u, orig }) =>
+          orig.calendar_event_id &&
+          (orig.start_time !== u.start_time || orig.end_time !== u.end_time),
+      );
+
+    if (calendarUpdates.length > 0) {
+      const results = await Promise.all(
+        calendarUpdates.map(async ({ u, orig }) => {
+          try {
+            const res = await fetch(
+              'https://bottlesandprint.app.n8n.cloud/workflows/fLMUk9SrT4oEbv3v/trigger/life-hq-update-event',
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  eventId: orig.calendar_event_id,
+                  start: pacificIso(dateString, u.start_time),
+                  end: pacificIso(dateString, u.end_time),
+                  title: orig.title,
+                  category: orig.category,
+                }),
+              },
+            );
+            const data = await res.json().catch(() => ({}));
+            return { id: u.id, ok: res.ok && data?.success !== false };
+          } catch (err) {
+            console.error('Calendar sync error:', err);
+            return { id: u.id, ok: false };
+          }
+        }),
+      );
+      const okIds = results.filter((r) => r.ok).map((r) => r.id);
+      const failed = results.filter((r) => !r.ok).length;
+      if (okIds.length > 0) {
+        toast.success(okIds.length === 1 ? 'Calendar synced' : `Calendar synced (${okIds.length})`);
+        // Clear out-of-sync flags for successfully-synced items
+        setOutOfSyncIds((prev) => {
+          const next = new Set(prev);
+          okIds.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
+      if (failed > 0) {
+        toast.error('Calendar update failed (task time saved)');
+      }
+    }
+
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
   };
 
