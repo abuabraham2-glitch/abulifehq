@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
-const REGENERATE_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/regenerate-today';
+const REGENERATE_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-regenerate-today';
 
 interface Props {
   open: boolean;
@@ -19,20 +19,22 @@ export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
     setLoading(true);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90s safety
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
       const res = await fetch(REGENERATE_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}',
+        body: JSON.stringify({}),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      if (!res.ok) throw new Error('Webhook failed');
-      qc.invalidateQueries({ queryKey: ['daily-plan'] });
-      toast.success('New plan ready');
+      if (!res.ok) throw new Error(`Webhook returned ${res.status}`);
+      await qc.invalidateQueries({ queryKey: ['daily-plan'] });
+      await qc.invalidateQueries({ queryKey: ['plan-items'] });
+      toast.success("Today's plan rebuilt");
       onOpenChange(false);
-    } catch {
-      toast.error("Couldn't build a new plan. Try again or check Telegram for details.");
+    } catch (err) {
+      console.warn('[regenerate-today] error:', err);
+      toast.error("Couldn't rebuild plan. Check Telegram or try again.");
     } finally {
       setLoading(false);
     }
@@ -45,7 +47,7 @@ export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-[16px]">Rebuild today's plan?</AlertDialogTitle>
             <AlertDialogDescription className="text-[13px]">
-              This will replace all current items and their calendar events.
+              Claude will refit your remaining tasks around the current time. Completed, skipped, in-progress, and locked calendar items stay exactly where they are. This takes about 30 seconds.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -56,7 +58,7 @@ export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
                 handleRebuild();
               }}
               className="rounded-xl min-h-[44px] text-white"
-              style={{ backgroundColor: '#5C3D1E' }}
+              style={{ backgroundColor: '#B8906C' }}
             >
               Rebuild
             </AlertDialogAction>
@@ -64,17 +66,18 @@ export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Loading overlay */}
       {loading && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center"
           style={{ backgroundColor: 'rgba(245,240,232,0.92)' }}
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
         >
           <div className="flex flex-col items-center gap-4 px-6 text-center">
             <Loader2 size={32} className="animate-spin" style={{ color: '#5C3D1E' }} />
             <div>
-              <p className="text-[15px] font-medium text-foreground">Building your new plan...</p>
-              <p className="text-[13px] text-muted-foreground mt-1">This can take 20–30 seconds</p>
+              <p className="text-[15px] font-medium text-foreground">Rebuilding today's plan...</p>
+              <p className="text-[13px] text-muted-foreground mt-1">This takes about 30 seconds. Hang tight.</p>
             </div>
           </div>
         </div>
