@@ -316,6 +316,16 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                 ))}
               </div>
             </div>
+            <div
+              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card"
+              style={{ border: '1px solid #E8D5B8' }}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-foreground">Save for future days too</p>
+                <p className="text-[11px] text-muted-foreground">Off = today only · On = adds to your task list</p>
+              </div>
+              <Switch checked={saveForFuture} onCheckedChange={setSaveForFuture} />
+            </div>
             <button
               onClick={handleQuickAdd}
               disabled={!quickTitle.trim() || busy}
@@ -323,7 +333,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
               style={{ backgroundColor: '#5C3D1E' }}
             >
               {busy && <Loader2 size={16} className="animate-spin" />}
-              Add to today
+              Add
             </button>
           </div>
         )}
