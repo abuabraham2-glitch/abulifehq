@@ -43,6 +43,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
     setSearch('');
     setQuickTitle('');
     setQuickMinutes(30);
+    setSaveForFuture(false);
   };
 
   const handleClose = (o: boolean) => {
