@@ -204,7 +204,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
             <SheetTitle className="text-[16px]">
               {view === 'menu' && 'Add to today'}
               {view === 'pick' && 'Pick a task to add'}
-              {view === 'quick' && 'Quick add to today'}
+              {view === 'quick' && 'Add a new task'}
             </SheetTitle>
           </div>
         </SheetHeader>
