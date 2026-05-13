@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Search, Plus, Zap, ListChecks, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
