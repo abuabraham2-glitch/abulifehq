@@ -140,13 +140,48 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
     });
   };
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = async () => {
     const title = quickTitle.trim();
     if (!title) return;
+    const category = 'Personal';
+
+    if (saveForFuture) {
+      setBusy(true);
+      try {
+        const { data: newTask, error: te } = await supabase
+          .from('tasks')
+          .insert({
+            name: title,
+            category,
+            quadrant: 'Schedule',
+            est_minutes: quickMinutes,
+            status: 'active',
+            needs_triage: false,
+            source: 'manual',
+            ai_categorized: false,
+          })
+          .select()
+          .single();
+        if (te || !newTask) throw te ?? new Error('Task insert failed');
+        qc.invalidateQueries({ queryKey: ['tasks'] });
+        await insertAndSync({
+          title,
+          estMinutes: quickMinutes,
+          category,
+          taskId: newTask.id,
+          localOnly: false,
+        });
+      } catch (e: any) {
+        toast.error(e?.message || 'Failed to add task');
+        setBusy(false);
+      }
+      return;
+    }
+
     insertAndSync({
       title,
       estMinutes: quickMinutes,
-      category: 'Personal',
+      category,
       taskId: null,
       localOnly: true,
     });
