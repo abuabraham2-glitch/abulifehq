@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Search, Plus, Zap, ListChecks, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -29,6 +30,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
   const [search, setSearch] = useState('');
   const [quickTitle, setQuickTitle] = useState('');
   const [quickMinutes, setQuickMinutes] = useState(30);
+  const [saveForFuture, setSaveForFuture] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const { data: plan } = useTodayPlan();
@@ -41,6 +43,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
     setSearch('');
     setQuickTitle('');
     setQuickMinutes(30);
+    setSaveForFuture(false);
   };
 
   const handleClose = (o: boolean) => {
@@ -137,13 +140,48 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
     });
   };
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = async () => {
     const title = quickTitle.trim();
     if (!title) return;
+    const category = 'Personal';
+
+    if (saveForFuture) {
+      setBusy(true);
+      try {
+        const { data: newTask, error: te } = await supabase
+          .from('tasks')
+          .insert({
+            name: title,
+            category,
+            quadrant: 'Schedule',
+            est_minutes: quickMinutes,
+            status: 'active',
+            needs_triage: false,
+            source: 'manual',
+            ai_categorized: false,
+          })
+          .select()
+          .single();
+        if (te || !newTask) throw te ?? new Error('Task insert failed');
+        qc.invalidateQueries({ queryKey: ['tasks'] });
+        await insertAndSync({
+          title,
+          estMinutes: quickMinutes,
+          category,
+          taskId: newTask.id,
+          localOnly: false,
+        });
+      } catch (e: any) {
+        toast.error(e?.message || 'Failed to add task');
+        setBusy(false);
+      }
+      return;
+    }
+
     insertAndSync({
       title,
       estMinutes: quickMinutes,
-      category: 'Personal',
+      category,
       taskId: null,
       localOnly: true,
     });
@@ -166,7 +204,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
             <SheetTitle className="text-[16px]">
               {view === 'menu' && 'Add to today'}
               {view === 'pick' && 'Pick a task to add'}
-              {view === 'quick' && 'Quick add to today'}
+              {view === 'quick' && 'Add a new task'}
             </SheetTitle>
           </div>
         </SheetHeader>
@@ -202,8 +240,8 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                 <Zap size={18} style={{ color: '#B8906C' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-medium text-foreground">Quick add</p>
-                <p className="text-[12px] text-muted-foreground">One-off thing for today</p>
+                <p className="text-[15px] font-medium text-foreground">Add a new task</p>
+                <p className="text-[12px] text-muted-foreground">Create a new task for today</p>
               </div>
             </button>
           </div>
@@ -278,6 +316,16 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                 ))}
               </div>
             </div>
+            <div
+              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card"
+              style={{ border: '1px solid #E8D5B8' }}
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-medium text-foreground">Save for future days too</p>
+                <p className="text-[11px] text-muted-foreground">Off = today only · On = adds to your task list</p>
+              </div>
+              <Switch checked={saveForFuture} onCheckedChange={setSaveForFuture} />
+            </div>
             <button
               onClick={handleQuickAdd}
               disabled={!quickTitle.trim() || busy}
@@ -285,7 +333,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
               style={{ backgroundColor: '#5C3D1E' }}
             >
               {busy && <Loader2 size={16} className="animate-spin" />}
-              Add to today
+              Add
             </button>
           </div>
         )}
