@@ -30,6 +30,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
   const [search, setSearch] = useState('');
   const [quickTitle, setQuickTitle] = useState('');
   const [quickMinutes, setQuickMinutes] = useState(30);
+  const [saveForFuture, setSaveForFuture] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const { data: plan } = useTodayPlan();
