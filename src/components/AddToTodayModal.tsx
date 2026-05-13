@@ -240,8 +240,8 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                 <Zap size={18} style={{ color: '#B8906C' }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-medium text-foreground">Quick add</p>
-                <p className="text-[12px] text-muted-foreground">One-off thing for today</p>
+                <p className="text-[15px] font-medium text-foreground">Add a new task</p>
+                <p className="text-[12px] text-muted-foreground">Create a new task for today</p>
               </div>
             </button>
           </div>
