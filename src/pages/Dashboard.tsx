@@ -8,7 +8,7 @@ import { PlanChatSection } from '@/components/PlanChatSection';
 import { DayStripCard } from '@/components/DayStripCard';
 import { CalendarBanner } from '@/components/CalendarBanner';
 
-import { PreferencesSection } from '@/components/PreferencesSection';
+
 import { TodaysSchedule } from '@/components/TodaysSchedule';
 import { AddToTodayModal } from '@/components/AddToTodayModal';
 import { RegenerateTodayDialog } from '@/components/RegenerateTodayDialog';
