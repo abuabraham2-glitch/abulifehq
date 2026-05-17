@@ -418,24 +418,51 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
     const reordered = arrayMove(visibleItems, activeIdx, overIdx);
 
-    // Recalculate sequential start/end times preserving each item's duration.
-    // Walk through `reordered`. External calendar events stay anchored to their original times.
-    // For non-external items, slot them into gaps between anchors starting at max(prev_end, now).
-    const realAnchors = visibleItems.filter((i) => i.is_external)
-      .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }));
+    // ===== Anchor detection =====
+    // An item is an anchor (keeps its current start/end, never re-timed) if:
+    //   - is_external (locked calendar event)
+    //   - status === 'completed' | 'skipped' | 'in_progress'
+    //   - status === 'pending' AND start_time < nowTime (already-past pending row)
+    // (completed/skipped are filtered out of visibleItems, but we keep the check for safety.)
+    const isAnchorItem = (i: typeof reordered[number]): boolean => {
+      if (i.is_external) return true;
+      if (i.status === 'completed' || i.status === 'skipped' || i.status === 'in_progress') return true;
+      if (i.status === 'pending' && i.start_time < nowTime) return true;
+      return false;
+    };
+
+    const itemAnchors = reordered.filter(isAnchorItem).map((a) => ({
+      id: a.id,
+      start: timeToMin(a.start_time),
+      end: timeToMin(a.end_time),
+    }));
     const blockedAnchors = getStaticLockedWindows().map((w, idx) => ({
       id: '_blocked_' + idx,
       start: w.startMin,
       end: w.endMin,
     }));
-    const anchors = [...realAnchors, ...blockedAnchors]
-      .sort((a, b) => a.start - b.start);
+    const anchors = [...itemAnchors, ...blockedAnchors].sort((a, b) => a.start - b.start);
     console.warn('[drag-reorder] anchors=', anchors);
 
-    const updates: { id: string; start_time: string; end_time: string; sort_order: number }[] = [];
-    let cursor = Math.max(timeToMin(nowTime), 6 * 60);
-    // If cursor lands inside any anchor (blocked window or external event), push it past.
-    // Loop because pushing past one anchor could land inside another adjacent anchor.
+    // ===== Hard stop for today (Pacific) =====
+    const pacWeekday = new Date(
+      new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }),
+    ).getDay(); // 0=Sun..6=Sat
+    let hardStopMin: number | null;
+    if (pacWeekday === 0) hardStopMin = 0; // Sunday: no scheduling
+    else if (pacWeekday === 6) hardStopMin = 16 * 60; // Saturday 4 PM
+    else hardStopMin = 18 * 60; // Weekday 6 PM
+    const hardStopLabel = pacWeekday === 6 ? '4:00 PM' : '6:00 PM';
+
+    if (pacWeekday === 0) {
+      toast("Can't reorder — Sunday is a rest day.");
+      return;
+    }
+
+    // ===== Cursor start: round nowTime up to next 15-min boundary, never before 6 AM =====
+    const round15Up = (m: number) => Math.ceil(m / 15) * 15;
+    let cursor = Math.max(round15Up(timeToMin(nowTime)), 6 * 60);
+    // If cursor lands inside any anchor (item or blocked window), push it past.
     let pushed = true;
     while (pushed) {
       pushed = false;
@@ -448,17 +475,15 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       }
     }
     console.warn('[drag-reorder] cursor start after block-skip=', cursor);
-    let anchorIdx = 0;
+
+    const updates: { id: string; start_time: string; end_time: string; sort_order: number }[] = [];
 
     for (let i = 0; i < reordered.length; i++) {
       const item = reordered[i];
       const dur = (item.est_minutes ?? Math.max(15, timeToMin(item.end_time) - timeToMin(item.start_time))) || 30;
 
-      if (item.is_external) {
-        // Keep its original times, advance cursor past it.
-        // Do NOT manually advance anchorIdx — the while-loop on the next non-external
-        // iteration handles that, and now that anchors[] also contains blocked windows,
-        // a manual increment would skip past a blocked window incorrectly.
+      if (isAnchorItem(item)) {
+        // Keep its original times. Advance cursor past it so later items don't overlap.
         cursor = Math.max(cursor, timeToMin(item.end_time));
         updates.push({
           id: item.id,
@@ -469,15 +494,32 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         continue;
       }
 
-      // Skip past any anchors that end before our cursor
-      // Also: if the next anchor starts before cursor+dur, jump cursor to anchor.end
-      while (anchorIdx < anchors.length && anchors[anchorIdx].end <= cursor) anchorIdx++;
-      if (anchorIdx < anchors.length && anchors[anchorIdx].start < cursor + dur) {
-        cursor = anchors[anchorIdx].end;
-        anchorIdx++;
+      // Push cursor past any blocked windows it currently sits inside.
+      let p = true;
+      while (p) {
+        p = false;
+        for (const a of anchors) {
+          if (cursor >= a.start && cursor < a.end) {
+            cursor = a.end;
+            p = true;
+            break;
+          }
+        }
       }
+      // If next anchor starts before cursor+dur, jump past it.
+      const blockingAnchor = anchors.find((a) => a.start >= cursor && a.start < cursor + dur);
+      if (blockingAnchor) cursor = blockingAnchor.end;
+
       const start = cursor;
       const end = start + dur;
+
+      // Hard-stop check
+      if (end > hardStopMin) {
+        console.warn('[drag-reorder] rejected — item', item.title, 'would end at', minToTime(end), 'past hardStop', minToTime(hardStopMin));
+        toast(`Can't reorder — would push tasks past today's ${hardStopLabel}.`);
+        return;
+      }
+
       updates.push({
         id: item.id,
         start_time: minToTime(start),
@@ -568,6 +610,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       if (failed > 0) {
         toast.error('Calendar update failed (task time saved)');
       }
+    } else {
+      toast.success('Reordered');
     }
 
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
