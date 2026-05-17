@@ -528,25 +528,28 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     if (calendarUpdates.length > 0) {
       const results = await Promise.all(
         calendarUpdates.map(async ({ u, orig }) => {
+          const body = {
+            eventId: orig.calendar_event_id,
+            start: pacificIso(dateString, u.start_time),
+            end: pacificIso(dateString, u.end_time),
+            title: orig.title,
+            category: orig.category,
+            planItemId: orig.id,
+          };
+          console.warn('[update-event] POST', UPDATE_EVENT_WEBHOOK, body);
           try {
-            const res = await fetch(
-              'https://bottlesandprint.app.n8n.cloud/workflows/fLMUk9SrT4oEbv3v/trigger/life-hq-update-event',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  eventId: orig.calendar_event_id,
-                  start: pacificIso(dateString, u.start_time),
-                  end: pacificIso(dateString, u.end_time),
-                  title: orig.title,
-                  category: orig.category,
-                }),
-              },
-            );
-            const data = await res.json().catch(() => ({}));
+            const res = await fetch(UPDATE_EVENT_WEBHOOK, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            const text = await res.text();
+            console.warn('[update-event] response', res.status, text);
+            let data: any = {};
+            try { data = text ? JSON.parse(text) : {}; } catch { /* non-json ok */ }
             return { id: u.id, ok: res.ok && data?.success !== false };
-          } catch (err) {
-            console.error('Calendar sync error:', err);
+          } catch (err: any) {
+            console.error('[update-event] error', err?.message, err?.stack);
             return { id: u.id, ok: false };
           }
         }),
