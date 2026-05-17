@@ -391,12 +391,19 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     const { active, over } = event;
     if (!over || active.id === over.id || viewTomorrow) return;
 
-    const activeIdx = sortedItems.findIndex((i) => i.id === active.id);
-    const overIdx = sortedItems.findIndex((i) => i.id === over.id);
+    // Use visibleItems — the same list rendered in <SortableContext> — so indices
+    // line up and we never rewrite times for completed/skipped/deferred rows.
+    const activeIdx = visibleItems.findIndex((i) => i.id === active.id);
+    const overIdx = visibleItems.findIndex((i) => i.id === over.id);
     if (activeIdx < 0 || overIdx < 0) return;
 
-    const draggedItem = sortedItems[activeIdx];
-    const overItem = sortedItems[overIdx];
+    const draggedItem = visibleItems[activeIdx];
+    const overItem = visibleItems[overIdx];
+    const prevItem = overIdx > 0 ? visibleItems[overIdx - 1] : null;
+    const referenceTime = prevItem ? prevItem.end_time : nowTime;
+    console.warn('[drag-reorder] dragged', draggedItem.title,
+      'oldStart=', draggedItem.start_time, 'droppedAtIdx=', overIdx,
+      'referenceTime=', referenceTime);
     // Anchors cannot move and cannot be displaced past
     if (draggedItem.is_external || draggedItem.id === activeItemId) return;
     if (overItem.is_external) {
