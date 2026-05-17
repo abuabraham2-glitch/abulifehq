@@ -391,12 +391,19 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     const { active, over } = event;
     if (!over || active.id === over.id || viewTomorrow) return;
 
-    const activeIdx = sortedItems.findIndex((i) => i.id === active.id);
-    const overIdx = sortedItems.findIndex((i) => i.id === over.id);
+    // Use visibleItems — the same list rendered in <SortableContext> — so indices
+    // line up and we never rewrite times for completed/skipped/deferred rows.
+    const activeIdx = visibleItems.findIndex((i) => i.id === active.id);
+    const overIdx = visibleItems.findIndex((i) => i.id === over.id);
     if (activeIdx < 0 || overIdx < 0) return;
 
-    const draggedItem = sortedItems[activeIdx];
-    const overItem = sortedItems[overIdx];
+    const draggedItem = visibleItems[activeIdx];
+    const overItem = visibleItems[overIdx];
+    const prevItem = overIdx > 0 ? visibleItems[overIdx - 1] : null;
+    const referenceTime = prevItem ? prevItem.end_time : nowTime;
+    console.warn('[drag-reorder] dragged', draggedItem.title,
+      'oldStart=', draggedItem.start_time, 'droppedAtIdx=', overIdx,
+      'referenceTime=', referenceTime);
     // Anchors cannot move and cannot be displaced past
     if (draggedItem.is_external || draggedItem.id === activeItemId) return;
     if (overItem.is_external) {
@@ -409,12 +416,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       return;
     }
 
-    const reordered = arrayMove(sortedItems, activeIdx, overIdx);
+    const reordered = arrayMove(visibleItems, activeIdx, overIdx);
 
     // Recalculate sequential start/end times preserving each item's duration.
     // Walk through `reordered`. External calendar events stay anchored to their original times.
     // For non-external items, slot them into gaps between anchors starting at max(prev_end, now).
-    const realAnchors = sortedItems.filter((i) => i.is_external)
+    const realAnchors = visibleItems.filter((i) => i.is_external)
       .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }));
     const blockedAnchors = getStaticLockedWindows().map((w, idx) => ({
       id: '_blocked_' + idx,
@@ -521,25 +528,28 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     if (calendarUpdates.length > 0) {
       const results = await Promise.all(
         calendarUpdates.map(async ({ u, orig }) => {
+          const body = {
+            eventId: orig.calendar_event_id,
+            start: pacificIso(dateString, u.start_time),
+            end: pacificIso(dateString, u.end_time),
+            title: orig.title,
+            category: orig.category,
+            planItemId: orig.id,
+          };
+          console.warn('[update-event] POST', UPDATE_EVENT_WEBHOOK, body);
           try {
-            const res = await fetch(
-              'https://bottlesandprint.app.n8n.cloud/workflows/fLMUk9SrT4oEbv3v/trigger/life-hq-update-event',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  eventId: orig.calendar_event_id,
-                  start: pacificIso(dateString, u.start_time),
-                  end: pacificIso(dateString, u.end_time),
-                  title: orig.title,
-                  category: orig.category,
-                }),
-              },
-            );
-            const data = await res.json().catch(() => ({}));
+            const res = await fetch(UPDATE_EVENT_WEBHOOK, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            const text = await res.text();
+            console.warn('[update-event] response', res.status, text);
+            let data: any = {};
+            try { data = text ? JSON.parse(text) : {}; } catch { /* non-json ok */ }
             return { id: u.id, ok: res.ok && data?.success !== false };
-          } catch (err) {
-            console.error('Calendar sync error:', err);
+          } catch (err: any) {
+            console.error('[update-event] error', err?.message, err?.stack);
             return { id: u.id, ok: false };
           }
         }),
