@@ -610,6 +610,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       if (failed > 0) {
         toast.error('Calendar update failed (task time saved)');
       }
+    } else {
+      toast.success('Reordered');
     }
 
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
