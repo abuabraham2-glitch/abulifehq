@@ -416,12 +416,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       return;
     }
 
-    const reordered = arrayMove(sortedItems, activeIdx, overIdx);
+    const reordered = arrayMove(visibleItems, activeIdx, overIdx);
 
     // Recalculate sequential start/end times preserving each item's duration.
     // Walk through `reordered`. External calendar events stay anchored to their original times.
     // For non-external items, slot them into gaps between anchors starting at max(prev_end, now).
-    const realAnchors = sortedItems.filter((i) => i.is_external)
+    const realAnchors = visibleItems.filter((i) => i.is_external)
       .map((a) => ({ id: a.id, start: timeToMin(a.start_time), end: timeToMin(a.end_time) }));
     const blockedAnchors = getStaticLockedWindows().map((w, idx) => ({
       id: '_blocked_' + idx,
