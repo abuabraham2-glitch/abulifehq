@@ -245,10 +245,20 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   };
 
   const handleDefer = async (item: PlanItem, deferDate: string) => {
-    // UPDATE plan_items.status to 'deferred' (do NOT delete — row still shows in "Pushed today")
-    await updatePlanItem.mutateAsync({ id: item.id, status: 'deferred' });
-    // PATCH tasks: status='deferred' AND deferred_until in a single update
-    if (item.task_id) await updateTask.mutateAsync({ id: item.task_id, status: 'deferred', deferred_until: deferDate });
+    // Mark plan_items row as 'skipped' so Regenerate Today / morning audit
+    // doesn't treat it as an ALREADY PAST pending row. Run in parallel with
+    // the tasks PATCH; don't block on plan_items failure.
+    const planItemPatch = supabase
+      .from('plan_items')
+      .update({ status: 'skipped' } as any)
+      .eq('id', item.id)
+      .then(({ error }) => {
+        if (error) console.warn('[push] plan_items skipped patch failed', error);
+      });
+    const tasksPatch = item.task_id
+      ? updateTask.mutateAsync({ id: item.task_id, status: 'deferred', deferred_until: deferDate })
+      : Promise.resolve();
+    await Promise.all([planItemPatch, tasksPatch]);
     fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
     setPushItem(null);
