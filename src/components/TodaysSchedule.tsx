@@ -630,6 +630,29 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
   if (isLoading) return null;
 
+  if (!viewTomorrow && pausedToday) {
+    const isSingleDay = pausedToday.start_date === pausedToday.end_date;
+    const fmt = (s: string) => {
+      const [y, m, d] = s.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+    return (
+      <div>
+        <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
+        <div
+          className="rounded-[14px] p-6 text-center mb-2"
+          style={{ backgroundColor: 'hsl(var(--card))', border: '1.5px solid #B8906C' }}
+        >
+          <p className="text-[18px] font-medium" style={{ color: '#5C3D1E' }}>
+            {isSingleDay ? 'Paused' : `Paused ${fmt(pausedToday.start_date)} to ${fmt(pausedToday.end_date)}`}
+          </p>
+        </div>
+        {addButton}
+      </div>
+    );
+  }
+
+
   if (viewTomorrow && !sortedItems.length) {
     return (
       <div>
