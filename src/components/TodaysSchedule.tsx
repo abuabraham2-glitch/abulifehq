@@ -80,7 +80,7 @@ interface Props {
   pausedToday?: { start_date: string; end_date: string } | null;
 }
 
-export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = null }: Props) {
+export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = null, pausedToday = null }: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
