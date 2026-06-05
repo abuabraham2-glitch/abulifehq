@@ -24,7 +24,7 @@ export function RegenerateTodayDialog({ open, onOpenChange, keepTasksOnly }: Pro
       const res = await fetch(REGENERATE_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ keepTasksOnly }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
