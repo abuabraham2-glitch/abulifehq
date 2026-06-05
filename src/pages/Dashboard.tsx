@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Inbox, ChevronRight, ChevronDown, RefreshCw, Plus } from 'lucide-react';
+import { Inbox, ChevronRight, ChevronDown, RefreshCw, Plus, Pause, Play, CalendarRange } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BrainDumpModal } from '@/components/BrainDumpModal';
 import { AddNoteModal } from '@/components/AddNoteModal';
@@ -13,25 +13,79 @@ import { TodaysSchedule } from '@/components/TodaysSchedule';
 import { AddToTodayModal } from '@/components/AddToTodayModal';
 import { RegenerateTodayDialog } from '@/components/RegenerateTodayDialog';
 import { PushedTodaySection } from '@/components/PushedTodaySection';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useTodayPlan, useTodayPlanItems } from '@/hooks/useDailyPlan';
+import { PauseDatesDialog } from '@/components/PauseDatesDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTodayPlan, useTodayPlanItems, todayStr, tomorrowStr } from '@/hooks/useDailyPlan';
 import { useTriageCount } from '@/hooks/useTriageQueue';
+import { usePauses, useTodayPause, useInvalidatePauses } from '@/hooks/usePauses';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { getGreeting, formatDate } from '@/lib/constants';
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [brainDumpOpen, setBrainDumpOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [viewTomorrow, setViewTomorrow] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [regenMode, setRegenMode] = useState<'new-tasks' | 'keep-tasks' | null>(null);
+  const [pauseDatesOpen, setPauseDatesOpen] = useState(false);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
   const { data: triageCount = 0 } = useTriageCount();
+  const { data: activePauses = [] } = usePauses();
+  const { todayPause } = useTodayPause();
+  const invalidatePauses = useInvalidatePauses();
+  const hasActivePause = activePauses.length > 0;
 
   const loading = loadingPlan || loadingItems;
   const hasPlan = !!plan && !!planItems?.length;
+
+  const handlePauseToday = async () => {
+    const today = todayStr();
+    const { error: insErr } = await supabase.from('pauses').insert({ start_date: today, end_date: today } as any);
+    if (insErr) {
+      console.warn('[pause-today] insert failed', insErr);
+      toast.error("Couldn't pause today.");
+      return;
+    }
+    // Clear today's plan_items
+    if (plan?.id) {
+      const { error: delErr } = await supabase.from('plan_items').delete().eq('plan_id', plan.id);
+      if (delErr) console.warn('[pause-today] delete plan_items failed', delErr);
+    }
+    invalidatePauses();
+    qc.invalidateQueries({ queryKey: ['daily-plan'] });
+    toast.success('Paused today');
+  };
+
+  const handlePauseTomorrow = async () => {
+    const tom = tomorrowStr();
+    const { error } = await supabase.from('pauses').insert({ start_date: tom, end_date: tom } as any);
+    if (error) {
+      console.warn('[pause-tomorrow] insert failed', error);
+      toast.error("Couldn't pause tomorrow.");
+      return;
+    }
+    invalidatePauses();
+    toast.success('Paused tomorrow');
+  };
+
+  const handleResume = async () => {
+    const today = todayStr();
+    const { error } = await supabase.from('pauses').delete().gte('end_date', today);
+    if (error) {
+      console.warn('[resume] delete failed', error);
+      toast.error("Couldn't resume.");
+      return;
+    }
+    invalidatePauses();
+    qc.invalidateQueries({ queryKey: ['daily-plan'] });
+    toast.success('Resumed');
+  };
 
   return (
     <div className="space-y-5 md:space-y-6 pb-4">
@@ -45,7 +99,7 @@ export default function Dashboard() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="rounded-xl">
-          <DropdownMenuItem onClick={() => setRegenMode('new-tasks')} className="text-[13px] cursor-pointer">
+            <DropdownMenuItem onClick={() => setRegenMode('new-tasks')} className="text-[13px] cursor-pointer">
               <RefreshCw size={14} className="mr-2" />
               Regenerate + add new tasks
             </DropdownMenuItem>
@@ -53,6 +107,25 @@ export default function Dashboard() {
               <RefreshCw size={14} className="mr-2" />
               Regenerate, keep current tasks
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handlePauseToday} className="text-[13px] cursor-pointer">
+              <Pause size={14} className="mr-2" />
+              Pause today
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handlePauseTomorrow} className="text-[13px] cursor-pointer">
+              <Pause size={14} className="mr-2" />
+              Pause tomorrow
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setPauseDatesOpen(true)} className="text-[13px] cursor-pointer">
+              <CalendarRange size={14} className="mr-2" />
+              Pause dates…
+            </DropdownMenuItem>
+            {hasActivePause && (
+              <DropdownMenuItem onClick={handleResume} className="text-[13px] cursor-pointer">
+                <Play size={14} className="mr-2" />
+                Resume
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
         <h1 className="text-[22px] md:text-[32px] md:font-semibold font-medium text-foreground mt-0.5">{getGreeting()}, Abu</h1>
@@ -102,26 +175,27 @@ export default function Dashboard() {
         </div>
       )}
 
-      {!loading && !hasPlan && (
+      {!loading && !hasPlan && !todayPause && (
         <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
           <p className="text-[14px] text-muted-foreground">No plan for today yet.</p>
           <p className="text-[13px] text-muted-foreground mt-1">Your daily plan will be generated at 9pm.</p>
         </div>
       )}
 
-      {!loading && hasPlan && (
+      {!loading && (hasPlan || todayPause) && (
         <>
           {/* Day Strip */}
           <DayStripCard viewTomorrow={viewTomorrow} />
 
           {/* Calendar events banner — always today */}
-          <CalendarBanner />
+          {!todayPause && <CalendarBanner />}
 
-          {/* Toggle + Focus + Timeline */}
+          {/* Toggle + Focus + Timeline (or Paused card when today is paused) */}
           <TodaysSchedule
             viewTomorrow={viewTomorrow}
             onToggleTab={() => setViewTomorrow(!viewTomorrow)}
             planId={plan?.id ?? null}
+            pausedToday={todayPause}
             addButton={
               !viewTomorrow ? (
                 <button
@@ -136,11 +210,13 @@ export default function Dashboard() {
             }
           />
 
-          {/* Pushed today (only on Today tab) */}
-          {!viewTomorrow && <PushedTodaySection />}
+          {/* Pushed today (only on Today tab, hidden while paused) */}
+          {!viewTomorrow && !todayPause && <PushedTodaySection />}
 
           {/* Chat input for plan revisions */}
-          <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
+          {!todayPause && (
+            <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
+          )}
         </>
       )}
 
@@ -148,6 +224,7 @@ export default function Dashboard() {
       <AddNoteModal open={noteOpen} onOpenChange={setNoteOpen} />
       <AddToTodayModal open={addOpen} onOpenChange={setAddOpen} />
       <RegenerateTodayDialog open={regenMode !== null} onOpenChange={(o) => !o && setRegenMode(null)} keepTasksOnly={regenMode === 'keep-tasks'} />
+      <PauseDatesDialog open={pauseDatesOpen} onOpenChange={setPauseDatesOpen} onSaved={invalidatePauses} />
     </div>
   );
 }
