@@ -77,6 +77,7 @@ interface Props {
   onToggleTab: () => void;
   addButton?: React.ReactNode;
   planId?: string | null;
+  pausedToday?: { start_date: string; end_date: string } | null;
 }
 
 export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = null }: Props) {
