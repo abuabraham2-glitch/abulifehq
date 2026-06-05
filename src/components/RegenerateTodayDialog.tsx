@@ -9,6 +9,7 @@ const REGENERATE_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-h
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  keepTasksOnly?: boolean;
 }
 
 export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
