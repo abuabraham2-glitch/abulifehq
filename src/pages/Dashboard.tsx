@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [viewTomorrow, setViewTomorrow] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenMode, setRegenMode] = useState<'new-tasks' | 'keep-tasks' | null>(null);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -45,9 +45,13 @@ export default function Dashboard() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="rounded-xl">
-            <DropdownMenuItem onClick={() => setRegenOpen(true)} className="text-[13px] cursor-pointer">
+          <DropdownMenuItem onClick={() => setRegenMode('new-tasks')} className="text-[13px] cursor-pointer">
               <RefreshCw size={14} className="mr-2" />
-              Regenerate plan for today
+              Regenerate + add new tasks
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setRegenMode('keep-tasks')} className="text-[13px] cursor-pointer">
+              <RefreshCw size={14} className="mr-2" />
+              Regenerate, keep current tasks
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -143,7 +147,7 @@ export default function Dashboard() {
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
       <AddNoteModal open={noteOpen} onOpenChange={setNoteOpen} />
       <AddToTodayModal open={addOpen} onOpenChange={setAddOpen} />
-      <RegenerateTodayDialog open={regenOpen} onOpenChange={setRegenOpen} />
+      <RegenerateTodayDialog open={regenMode !== null} onOpenChange={(o) => !o && setRegenMode(null)} keepTasksOnly={regenMode === 'keep-tasks'} />
     </div>
   );
 }

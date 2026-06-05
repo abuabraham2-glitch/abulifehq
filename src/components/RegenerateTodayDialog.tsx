@@ -9,9 +9,10 @@ const REGENERATE_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-h
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  keepTasksOnly?: boolean;
 }
 
-export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
+export function RegenerateTodayDialog({ open, onOpenChange, keepTasksOnly }: Props) {
   const [loading, setLoading] = useState(false);
   const qc = useQueryClient();
 
@@ -23,7 +24,7 @@ export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
       const res = await fetch(REGENERATE_WEBHOOK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ keepTasksOnly }),
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
