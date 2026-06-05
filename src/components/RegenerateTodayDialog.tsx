@@ -12,7 +12,7 @@ interface Props {
   keepTasksOnly?: boolean;
 }
 
-export function RegenerateTodayDialog({ open, onOpenChange }: Props) {
+export function RegenerateTodayDialog({ open, onOpenChange, keepTasksOnly }: Props) {
   const [loading, setLoading] = useState(false);
   const qc = useQueryClient();
 

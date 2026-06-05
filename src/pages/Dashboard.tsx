@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [viewTomorrow, setViewTomorrow] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [regenOpen, setRegenOpen] = useState(false);
+  const [regenMode, setRegenMode] = useState<'new-tasks' | 'keep-tasks' | null>(null);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
