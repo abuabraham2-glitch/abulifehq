@@ -195,6 +195,27 @@ export type Database = {
         }
         Relationships: []
       }
+      pauses: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          start_date?: string
+        }
+        Relationships: []
+      }
       plan_items: {
         Row: {
           actual_minutes: number | null
