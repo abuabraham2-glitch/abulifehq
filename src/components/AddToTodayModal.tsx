@@ -1,36 +1,34 @@
-import { useState, useMemo } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Search, Plus, Zap, ListChecks, Loader2, ArrowLeft } from 'lucide-react';
-import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useActiveTasks, type Task } from '@/hooks/useTasks';
-import { useTodayPlan, useTodayPlanItems, todayStr } from '@/hooks/useDailyPlan';
-import { getCategoryColor } from '@/lib/constants';
-import { findNextSlot, pacificIso } from '@/lib/planScheduling';
+import { useState, useMemo } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Search, Plus, Zap, ListChecks, Loader2, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useActiveTasks, type Task } from "@/hooks/useTasks";
+import { useTodayPlan, useTodayPlanItems, todayStr } from "@/hooks/useDailyPlan";
+import { getCategoryColor } from "@/lib/constants";
+import { findNextSlot, pacificIso } from "@/lib/planScheduling";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }
 
-const CREATE_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-create-event';
+const CREATE_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-create-event";
 
 const QUADRANT_ORDER: Record<string, number> = {
-  'Do Now': 0,
-  'Schedule': 1,
-  'Delegate': 2,
-  'Delete': 3,
+  "Do Now": 0,
+  Schedule: 1,
+  Delegate: 2,
+  Delete: 3,
 };
 
 export function AddToTodayModal({ open, onOpenChange }: Props) {
-  const [view, setView] = useState<'menu' | 'pick' | 'quick'>('menu');
-  const [search, setSearch] = useState('');
-  const [quickTitle, setQuickTitle] = useState('');
+  const [view, setView] = useState<"menu" | "pick" | "quick">("menu");
+  const [search, setSearch] = useState("");
+  const [quickTitle, setQuickTitle] = useState("");
   const [quickMinutes, setQuickMinutes] = useState(30);
-  const [saveForFuture, setSaveForFuture] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const { data: plan } = useTodayPlan();
@@ -39,11 +37,10 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
   const qc = useQueryClient();
 
   const reset = () => {
-    setView('menu');
-    setSearch('');
-    setQuickTitle('');
+    setView("menu");
+    setSearch("");
+    setQuickTitle("");
     setQuickMinutes(30);
-    setSaveForFuture(false);
   };
 
   const handleClose = (o: boolean) => {
@@ -57,8 +54,8 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
       return t.name.toLowerCase().includes(search.toLowerCase());
     });
     return list.sort((a, b) => {
-      const qa = QUADRANT_ORDER[a.quadrant ?? 'Delete'] ?? 4;
-      const qb = QUADRANT_ORDER[b.quadrant ?? 'Delete'] ?? 4;
+      const qa = QUADRANT_ORDER[a.quadrant ?? "Delete"] ?? 4;
+      const qb = QUADRANT_ORDER[b.quadrant ?? "Delete"] ?? 4;
       if (qa !== qb) return qa - qb;
       return (a.priority_order ?? 999) - (b.priority_order ?? 999);
     });
@@ -81,7 +78,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
       const maxSort = Math.max(0, ...(planItems ?? []).map((i) => i.sort_order ?? 0));
 
       const { data: inserted, error } = await supabase
-        .from('plan_items')
+        .from("plan_items")
         .insert({
           plan_id: plan.id,
           task_id: params.taskId,
@@ -90,7 +87,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
           start_time: slot.start,
           end_time: slot.end,
           est_minutes: params.estMinutes,
-          status: 'pending',
+          status: "pending",
           is_calendar_event: false,
           is_external: false,
           sort_order: maxSort + 1,
@@ -99,16 +96,14 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
         .select()
         .single();
 
-      if (error || !inserted) throw error ?? new Error('Insert failed');
+      if (error || !inserted) throw error ?? new Error("Insert failed");
 
-      // Refresh immediately so the new row shows up
-      qc.invalidateQueries({ queryKey: ['daily-plan'] });
+      qc.invalidateQueries({ queryKey: ["daily-plan"] });
 
-      // Fire-and-forget calendar event creation
       const dateStr = todayStr();
       fetch(CREATE_EVENT_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: params.title,
           start: pacificIso(dateStr, slot.start),
@@ -117,14 +112,14 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
           planItemId: inserted.id,
         }),
       })
-        .then(() => qc.invalidateQueries({ queryKey: ['daily-plan'] }))
+        .then(() => qc.invalidateQueries({ queryKey: ["daily-plan"] }))
         .catch(() => {});
 
       toast.success(`Added: ${params.title}`);
       reset();
       onOpenChange(false);
     } catch (e: any) {
-      toast.error(e?.message || 'Failed to add task');
+      toast.error(e?.message || "Failed to add task");
     } finally {
       setBusy(false);
     }
@@ -134,7 +129,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
     insertAndSync({
       title: t.name,
       estMinutes: t.est_minutes ?? 30,
-      category: t.category ?? 'Personal',
+      category: t.category ?? "Personal",
       taskId: t.id,
       localOnly: false,
     });
@@ -143,48 +138,40 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
   const handleQuickAdd = async () => {
     const title = quickTitle.trim();
     if (!title) return;
-    const category = 'Personal';
+    const category = "Personal";
 
-    if (saveForFuture) {
-      setBusy(true);
-      try {
-        const { data: newTask, error: te } = await supabase
-          .from('tasks')
-          .insert({
-            name: title,
-            category,
-            quadrant: 'Schedule',
-            est_minutes: quickMinutes,
-            status: 'active',
-            needs_triage: false,
-            source: 'manual',
-            ai_categorized: false,
-          })
-          .select()
-          .single();
-        if (te || !newTask) throw te ?? new Error('Task insert failed');
-        qc.invalidateQueries({ queryKey: ['tasks'] });
-        await insertAndSync({
-          title,
-          estMinutes: quickMinutes,
+    setBusy(true);
+    try {
+      // Always create a tasks row so the item survives Regenerate and pins work.
+      // Without a task_id, a plan_items row has no anchor — Regenerate wipes it
+      // and pinned_time can never write to tasks.
+      const { data: newTask, error: te } = await supabase
+        .from("tasks")
+        .insert({
+          name: title,
           category,
-          taskId: newTask.id,
-          localOnly: false,
-        });
-      } catch (e: any) {
-        toast.error(e?.message || 'Failed to add task');
-        setBusy(false);
-      }
-      return;
+          quadrant: "Schedule",
+          est_minutes: quickMinutes,
+          status: "active",
+          needs_triage: false,
+          source: "manual",
+          ai_categorized: false,
+        })
+        .select()
+        .single();
+      if (te || !newTask) throw te ?? new Error("Task insert failed");
+      qc.invalidateQueries({ queryKey: ["tasks"] });
+      await insertAndSync({
+        title,
+        estMinutes: quickMinutes,
+        category,
+        taskId: newTask.id,
+        localOnly: false,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to add task");
+      setBusy(false);
     }
-
-    insertAndSync({
-      title,
-      estMinutes: quickMinutes,
-      category,
-      taskId: null,
-      localOnly: true,
-    });
   };
 
   return (
@@ -192,35 +179,35 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
       <SheetContent
         side="bottom"
         className="rounded-t-[20px] max-h-[85vh] overflow-y-auto"
-        style={{ backgroundColor: '#F5F0E8' }}
+        style={{ backgroundColor: "#F5F0E8" }}
       >
         <SheetHeader className="text-left">
           <div className="flex items-center gap-2">
-            {view !== 'menu' && (
-              <button onClick={() => setView('menu')} className="p-1 -ml-1 text-muted-foreground" aria-label="Back">
+            {view !== "menu" && (
+              <button onClick={() => setView("menu")} className="p-1 -ml-1 text-muted-foreground" aria-label="Back">
                 <ArrowLeft size={18} />
               </button>
             )}
             <SheetTitle className="text-[16px]">
-              {view === 'menu' && 'Add to today'}
-              {view === 'pick' && 'Pick a task to add'}
-              {view === 'quick' && 'Add a new task'}
+              {view === "menu" && "Add to today"}
+              {view === "pick" && "Pick a task to add"}
+              {view === "quick" && "Add a new task"}
             </SheetTitle>
           </div>
         </SheetHeader>
 
-        {view === 'menu' && (
+        {view === "menu" && (
           <div className="space-y-2 mt-4 pb-6">
             <button
-              onClick={() => setView('pick')}
+              onClick={() => setView("pick")}
               className="w-full flex items-center gap-3 p-4 rounded-[14px] bg-card text-left min-h-[64px]"
-              style={{ border: '1px solid #E8D5B8' }}
+              style={{ border: "1px solid #E8D5B8" }}
             >
               <div
                 className="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: '#FFF8F0' }}
+                style={{ backgroundColor: "#FFF8F0" }}
               >
-                <ListChecks size={18} style={{ color: '#5C3D1E' }} />
+                <ListChecks size={18} style={{ color: "#5C3D1E" }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-medium text-foreground">Pick from my tasks</p>
@@ -229,15 +216,15 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
             </button>
 
             <button
-              onClick={() => setView('quick')}
+              onClick={() => setView("quick")}
               className="w-full flex items-center gap-3 p-4 rounded-[14px] bg-card text-left min-h-[64px]"
-              style={{ border: '1px solid #E8D5B8' }}
+              style={{ border: "1px solid #E8D5B8" }}
             >
               <div
                 className="w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: '#FFF8F0' }}
+                style={{ backgroundColor: "#FFF8F0" }}
               >
-                <Zap size={18} style={{ color: '#B8906C' }} />
+                <Zap size={18} style={{ color: "#B8906C" }} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-medium text-foreground">Add a new task</p>
@@ -247,7 +234,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
           </div>
         )}
 
-        {view === 'pick' && (
+        {view === "pick" && (
           <div className="mt-4 pb-6">
             <div className="relative mb-3">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -269,7 +256,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                   disabled={busy}
                   onClick={() => handlePickTask(t)}
                   className="w-full flex items-center gap-3 p-3 rounded-[12px] bg-card text-left min-h-[56px] disabled:opacity-50"
-                  style={{ border: '0.5px solid rgba(0,0,0,0.06)' }}
+                  style={{ border: "0.5px solid rgba(0,0,0,0.06)" }}
                 >
                   <div
                     className="w-2 h-2 rounded-full flex-shrink-0"
@@ -278,7 +265,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                   <div className="flex-1 min-w-0">
                     <p className="text-[14px] font-medium text-foreground truncate">{t.name}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {t.category ?? 'Personal'} · {t.est_minutes ?? 30}m
+                      {t.category ?? "Personal"} · {t.est_minutes ?? 30}m
                     </p>
                   </div>
                   <Plus size={16} className="text-muted-foreground flex-shrink-0" />
@@ -288,7 +275,7 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
           </div>
         )}
 
-        {view === 'quick' && (
+        {view === "quick" && (
           <div className="mt-4 pb-6 space-y-4">
             <Input
               value={quickTitle}
@@ -306,9 +293,9 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                     onClick={() => setQuickMinutes(m)}
                     className="flex-1 px-3 py-2.5 rounded-xl text-[13px] font-medium border min-h-[44px]"
                     style={{
-                      borderColor: quickMinutes === m ? '#B8906C' : 'hsl(var(--border))',
-                      backgroundColor: quickMinutes === m ? '#B8906C' : 'transparent',
-                      color: quickMinutes === m ? '#fff' : 'hsl(var(--foreground))',
+                      borderColor: quickMinutes === m ? "#B8906C" : "hsl(var(--border))",
+                      backgroundColor: quickMinutes === m ? "#B8906C" : "transparent",
+                      color: quickMinutes === m ? "#fff" : "hsl(var(--foreground))",
                     }}
                   >
                     {m}m
@@ -316,21 +303,11 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
                 ))}
               </div>
             </div>
-            <div
-              className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card"
-              style={{ border: '1px solid #E8D5B8' }}
-            >
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-medium text-foreground">Save for future days too</p>
-                <p className="text-[11px] text-muted-foreground">Off = today only · On = adds to your task list</p>
-              </div>
-              <Switch checked={saveForFuture} onCheckedChange={setSaveForFuture} />
-            </div>
             <button
               onClick={handleQuickAdd}
               disabled={!quickTitle.trim() || busy}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[15px] font-medium min-h-[48px] text-white disabled:opacity-50"
-              style={{ backgroundColor: '#5C3D1E' }}
+              style={{ backgroundColor: "#5C3D1E" }}
             >
               {busy && <Loader2 size={16} className="animate-spin" />}
               Add
