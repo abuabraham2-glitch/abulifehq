@@ -4,7 +4,6 @@ import { Inbox, ChevronRight, ChevronDown, RefreshCw, Plus, Pause, Play, Calenda
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrainDumpModal } from "@/components/BrainDumpModal";
 import { AddNoteModal } from "@/components/AddNoteModal";
-import { PlanChatSection } from "@/components/PlanChatSection";
 import { DayStripCard } from "@/components/DayStripCard";
 import { CalendarBanner } from "@/components/CalendarBanner";
 
@@ -224,11 +223,6 @@ export default function Dashboard() {
 
           {/* Pushed today (only on Today tab, hidden while paused) */}
           {!viewTomorrow && !todayPause && <PushedTodaySection />}
-
-          {/* Chat input for plan revisions */}
-          {!todayPause && (
-            <PlanChatSection planId={plan?.id ?? null} planItems={planItems ?? []} viewTomorrow={viewTomorrow} />
-          )}
         </>
       )}
 
