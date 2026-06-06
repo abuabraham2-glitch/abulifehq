@@ -229,6 +229,7 @@ export type Database = {
           is_calendar_event: boolean | null
           is_external: boolean
           local_only: boolean
+          pinned_time: string | null
           plan_id: string | null
           skip_reason: string | null
           sort_order: number | null
@@ -250,6 +251,7 @@ export type Database = {
           is_calendar_event?: boolean | null
           is_external?: boolean
           local_only?: boolean
+          pinned_time?: string | null
           plan_id?: string | null
           skip_reason?: string | null
           sort_order?: number | null
@@ -271,6 +273,7 @@ export type Database = {
           is_calendar_event?: boolean | null
           is_external?: boolean
           local_only?: boolean
+          pinned_time?: string | null
           plan_id?: string | null
           skip_reason?: string | null
           sort_order?: number | null
@@ -410,6 +413,7 @@ export type Database = {
           needs_triage: boolean | null
           notes: string | null
           notion_id: string | null
+          pinned_time: string | null
           priority_order: number | null
           quadrant: string | null
           skip_reason: string | null
@@ -434,6 +438,7 @@ export type Database = {
           needs_triage?: boolean | null
           notes?: string | null
           notion_id?: string | null
+          pinned_time?: string | null
           priority_order?: number | null
           quadrant?: string | null
           skip_reason?: string | null
@@ -458,6 +463,7 @@ export type Database = {
           needs_triage?: boolean | null
           notes?: string | null
           notion_id?: string | null
+          pinned_time?: string | null
           priority_order?: number | null
           quadrant?: string | null
           skip_reason?: string | null
