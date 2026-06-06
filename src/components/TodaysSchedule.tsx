@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Check, Calendar, CalendarDays, GripVertical, Trash2, AlertCircle } from "lucide-react";
+import { Check, Calendar, CalendarDays, GripVertical, Trash2, AlertCircle, Pin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -49,7 +49,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { timeToMin, minToTime, pacificIso } from "@/lib/planScheduling";
 import { DurationPicker } from "@/components/DurationPicker";
 import { StartTimePicker, getStaticLockedWindows } from "@/components/StartTimePicker";
-import { submitPlanRevision } from "@/lib/planRevision";
 
 const SKIP_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event";
 const UPDATE_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event";
@@ -331,29 +330,46 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   }, [sortedItems]);
 
   const handleTimeEdit = async (item: PlanItem, newTime24: string) => {
-    const command = `move ${item.title} to ${formatTime12h(newTime24)}`;
-    console.warn("[time-edit] submitting command=", command);
-    const toastId = toast.loading("Updating plan…", {
+    // Write pinned_time to plan_items row immediately
+    const { error: piError } = await supabase
+      .from("plan_items")
+      .update({ pinned_time: newTime24 } as any)
+      .eq("id", item.id);
+    if (piError) {
+      toast.error("Could not save pin.");
+      return;
+    }
+    // Also write to tasks row so the pin survives Regenerate
+    if (item.task_id) {
+      await supabase
+        .from("tasks")
+        .update({ pinned_time: newTime24 } as any)
+        .eq("id", item.task_id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    toast(`📌 Pinned to ${formatTime12h(newTime24)} — hit Regenerate to apply`, {
+      duration: 4000,
       style: { background: "#5C3D1E", color: "#fff", border: "none" },
     });
-    try {
-      const res = await submitPlanRevision({
-        message: command,
-        planId,
-        planItems: planItems ?? [],
-        viewTomorrow: false,
-      });
-      console.warn("[time-edit] revision flow response received");
-      if (res.action === "revision") {
-        queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
-        toast.success(res.message || "Plan updated", { id: toastId });
-      } else {
-        toast(res.message || "Done", { id: toastId });
-      }
-    } catch (e) {
-      console.error("[time-edit] revision flow error", e);
-      toast.error("Could not reach the server.", { id: toastId });
+  };
+
+  const handleClearPin = async (item: PlanItem) => {
+    const { error: piError } = await supabase
+      .from("plan_items")
+      .update({ pinned_time: null } as any)
+      .eq("id", item.id);
+    if (piError) {
+      toast.error("Could not clear pin.");
+      return;
     }
+    if (item.task_id) {
+      await supabase
+        .from("tasks")
+        .update({ pinned_time: null } as any)
+        .eq("id", item.task_id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    toast("Pin cleared", { duration: 3000 });
   };
 
   // ===== Swipe-to-delete with undo =====
@@ -619,6 +635,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
                   onChangeDuration={(m) => handleDurationChange(item, m)}
                   lockedWindows={lockedWindows}
                   onChangeStartTime={(t) => handleTimeEdit(item, t)}
+                  onClearPin={() => handleClearPin(item)}
                 />
               );
             })}
@@ -797,6 +814,7 @@ interface RowProps {
   onChangeDuration: (m: number) => void;
   lockedWindows: { startMin: number; endMin: number }[];
   onChangeStartTime: (newTime24: string) => void;
+  onClearPin: () => void;
 }
 
 const SWIPE_REVEAL = 80;
@@ -816,6 +834,7 @@ function ScheduleRow({
   onChangeDuration,
   lockedWindows,
   onChangeStartTime,
+  onClearPin,
 }: RowProps) {
   const isCompleted = item.status === "completed";
   const isSkipped = item.status === "skipped";
@@ -1059,6 +1078,12 @@ function ScheduleRow({
             {item.title}
           </span>
 
+          {item.pinned_time && !isExternal && (
+            <span title={`Pinned to ${formatTime12h(item.pinned_time)}`}>
+              <Pin size={12} className="flex-shrink-0" style={{ color: "#B8906C" }} />
+            </span>
+          )}
+
           {outOfSync && (
             <span title="Calendar event out of sync — will re-sync at next 9pm planner run">
               <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#E8A84C" }} />
@@ -1092,7 +1117,7 @@ function ScheduleRow({
             {item.category && ` · ${item.category}`}
           </p>
           {isPending && (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={onPush}
                 className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]"
@@ -1118,6 +1143,18 @@ function ScheduleRow({
               >
                 Delete
               </button>
+              {item.pinned_time && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClearPin();
+                  }}
+                  className="w-full px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px] flex items-center justify-center gap-1.5"
+                  style={{ borderColor: "#B8906C", color: "#5C3D1E" }}
+                >
+                  <Pin size={12} /> Clear pin ({formatTime12h(item.pinned_time)})
+                </button>
+              )}
             </div>
           )}
           {isSkipped && (
