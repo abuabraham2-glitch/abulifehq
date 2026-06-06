@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { Check, Calendar, CalendarDays, GripVertical, Trash2, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Check, Calendar, CalendarDays, GripVertical, Trash2, AlertCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,12 +10,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Calendar as CalendarPicker } from '@/components/ui/calendar';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   DndContext,
   closestCenter,
@@ -25,39 +25,46 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { usePlanItemsByDate, useUpdatePlanItem, useUpdatePlanItemDuration, todayStr, tomorrowStr, type PlanItem } from '@/hooks/useDailyPlan';
-import { useCompleteTask, useUpdateTask } from '@/hooks/useTasks';
-import { formatTime12h, getCategoryColor } from '@/lib/constants';
-import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
-import { timeToMin, minToTime, pacificIso } from '@/lib/planScheduling';
-import { DurationPicker } from '@/components/DurationPicker';
-import { StartTimePicker, getStaticLockedWindows } from '@/components/StartTimePicker';
-import { submitPlanRevision } from '@/lib/planRevision';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  usePlanItemsByDate,
+  useUpdatePlanItem,
+  useUpdatePlanItemDuration,
+  todayStr,
+  tomorrowStr,
+  type PlanItem,
+} from "@/hooks/useDailyPlan";
+import { useCompleteTask, useUpdateTask } from "@/hooks/useTasks";
+import { formatTime12h, getCategoryColor } from "@/lib/constants";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { timeToMin, minToTime, pacificIso } from "@/lib/planScheduling";
+import { DurationPicker } from "@/components/DurationPicker";
+import { StartTimePicker, getStaticLockedWindows } from "@/components/StartTimePicker";
+import { submitPlanRevision } from "@/lib/planRevision";
 
-const SKIP_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event';
-const UPDATE_EVENT_WEBHOOK = 'https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event';
+const SKIP_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event";
+const UPDATE_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event";
 
 function getNextMonday(weeksAhead: number = 1): string {
-  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
   const day = d.getDay();
-  const daysUntilMonday = ((8 - day) % 7) || 7;
+  const daysUntilMonday = (8 - day) % 7 || 7;
   d.setDate(d.getDate() + daysUntilMonday + (weeksAhead - 1) * 7);
   return formatDateStr(d);
 }
 function formatDateStr(d: Date): string {
   const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
 
@@ -65,10 +72,10 @@ function formatDateStr(d: Date): string {
 // " - PRIORITY", " (urgent)") so we can match a plan_item title back to
 // a row in `tasks` by name.
 function stripTitleSuffix(title: string): string {
-  if (!title) return '';
+  if (!title) return "";
   let t = title;
-  t = t.replace(/\s+[—–-]\s+[^—–-]+$/, '');
-  t = t.replace(/\s*\([^)]*\)\s*$/, '');
+  t = t.replace(/\s+[—–-]\s+[^—–-]+$/, "");
+  t = t.replace(/\s*\([^)]*\)\s*$/, "");
   return t.trim();
 }
 
@@ -90,7 +97,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   const queryClient = useQueryClient();
 
   // Pending completions awaiting 5s undo window. Maps planItemId -> { timeoutId, duration }
-  const pendingCompletions = useRef<Map<string, { timeoutId: ReturnType<typeof setTimeout>; duration: number }>>(new Map());
+  const pendingCompletions = useRef<Map<string, { timeoutId: ReturnType<typeof setTimeout>; duration: number }>>(
+    new Map(),
+  );
   const [pendingCompleteIds, setPendingCompleteIds] = useState<Set<string>>(new Set());
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
@@ -104,11 +113,16 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       const target = e.target as HTMLElement | null;
       if (!target) return;
       if (target.closest(`[data-row-id="${expandedId}"]`)) return;
-      if (target.closest('[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"], [data-sonner-toaster], [data-radix-portal]')) return;
+      if (
+        target.closest(
+          '[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"], [data-sonner-toaster], [data-radix-portal]',
+        )
+      )
+        return;
       setExpandedId(null);
     };
-    document.addEventListener('pointerdown', handler, true);
-    return () => document.removeEventListener('pointerdown', handler, true);
+    document.addEventListener("pointerdown", handler, true);
+    return () => document.removeEventListener("pointerdown", handler, true);
   }, [expandedId]);
   const [pushItem, setPushItem] = useState<PlanItem | null>(null);
   const [pickDateOpen, setPickDateOpen] = useState(false);
@@ -117,10 +131,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
   // Out-of-sync rows after drag-reorder (calendar events whose times moved but Cal API not yet synced)
   const [outOfSyncIds, setOutOfSyncIds] = useState<Set<string>>(new Set());
+  // Local visual order from drag — memory only, resets on refresh
+  const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
   const nowTime = useMemo(() => {
-    const pac = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-    return `${String(pac.getHours()).padStart(2, '0')}:${String(pac.getMinutes()).padStart(2, '0')}:00`;
+    const pac = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+    return `${String(pac.getHours()).padStart(2, "0")}:${String(pac.getMinutes()).padStart(2, "0")}:00`;
   }, []);
 
   const sortedItems = useMemo(() => {
@@ -131,14 +147,22 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   // rows are excluded entirely (Pushed today section surfaces skipped/deferred separately).
   // Note: pendingComplete rows still pass this filter because the DB row's status is
   // still 'pending' during the 5s undo window — only the displayed status is overridden.
-  const visibleItems = useMemo(
-    () => sortedItems.filter((i) => i.status !== 'skipped' && i.status !== 'deferred' && i.status !== 'completed'),
-    [sortedItems],
-  );
+  const visibleItems = useMemo(() => {
+    const filtered = sortedItems.filter(
+      (i) => i.status !== "skipped" && i.status !== "deferred" && i.status !== "completed",
+    );
+    if (!localOrder) return filtered;
+    const orderMap = new Map(localOrder.map((id, idx) => [id, idx]));
+    return [...filtered].sort((a, b) => {
+      const aIdx = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+      const bIdx = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+      return aIdx - bIdx;
+    });
+  }, [sortedItems, localOrder]);
 
   const activeItemId = useMemo(() => {
     if (viewTomorrow) return null;
-    const pending = sortedItems.filter((i) => i.status !== 'completed' && i.status !== 'skipped');
+    const pending = sortedItems.filter((i) => i.status !== "completed" && i.status !== "skipped");
     if (pending.length === 0) return null;
     const upcoming = pending.find((i) => i.start_time >= nowTime);
     return upcoming?.id ?? pending[0]?.id ?? null;
@@ -163,8 +187,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
   const fireSkipWebhook = (item: PlanItem) => {
     fetch(SKIP_EVENT_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
     }).catch(() => {});
   };
@@ -194,22 +218,22 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         next.delete(item.id);
         return next;
       });
-      await updatePlanItem.mutateAsync({ id: item.id, status: 'completed', actual_minutes: duration });
+      await updatePlanItem.mutateAsync({ id: item.id, status: "completed", actual_minutes: duration });
       if (item.task_id) {
         await completeTask.mutateAsync(item.task_id);
-        console.warn('done-delete-fix: tasks updated to completed for task_id', item.task_id);
+        console.warn("done-delete-fix: tasks updated to completed for task_id", item.task_id);
       } else {
         const titleKey = stripTitleSuffix(item.title);
-        const { data: matches } = await supabase
-          .from('tasks')
-          .select('id,name')
-          .ilike('name', titleKey);
+        const { data: matches } = await supabase.from("tasks").select("id,name").ilike("name", titleKey);
         if (matches && matches.length > 0) {
           await supabase
-            .from('tasks')
-            .update({ status: 'completed', completed_at: new Date().toISOString() })
-            .in('id', matches.map((m: any) => m.id));
-          console.warn('done-delete-fix: tasks updated by title fallback:', titleKey);
+            .from("tasks")
+            .update({ status: "completed", completed_at: new Date().toISOString() })
+            .in(
+              "id",
+              matches.map((m: any) => m.id),
+            );
+          console.warn("done-delete-fix: tasks updated by title fallback:", titleKey);
         }
       }
       fireSkipWebhook(item);
@@ -219,9 +243,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
     toast(`Marked done · ${duration}m`, {
       duration: 5000,
-      style: { background: '#5C3D1E', color: '#fff', border: 'none' },
+      style: { background: "#5C3D1E", color: "#fff", border: "none" },
       action: {
-        label: 'Undo',
+        label: "Undo",
         onClick: () => {
           const entry = pendingCompletions.current.get(item.id);
           if (entry) {
@@ -239,7 +263,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   };
 
   const handlePushTomorrow = async (item: PlanItem) => {
-    await updatePlanItem.mutateAsync({ id: item.id, status: 'skipped' });
+    await updatePlanItem.mutateAsync({ id: item.id, status: "skipped" });
     fireSkipWebhook(item);
     setPushItem(null);
     setExpandedId(null);
@@ -250,26 +274,26 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     // doesn't treat it as an ALREADY PAST pending row. Run in parallel with
     // the tasks PATCH; don't block on plan_items failure.
     const planItemPatch = supabase
-      .from('plan_items')
-      .update({ status: 'skipped' } as any)
-      .eq('id', item.id)
+      .from("plan_items")
+      .update({ status: "skipped" } as any)
+      .eq("id", item.id)
       .then(({ error }) => {
-        if (error) console.warn('[push] plan_items skipped patch failed', error);
+        if (error) console.warn("[push] plan_items skipped patch failed", error);
       });
     const tasksPatch = item.task_id
-      ? updateTask.mutateAsync({ id: item.task_id, status: 'deferred', deferred_until: deferDate })
+      ? updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: deferDate })
       : Promise.resolve();
     await Promise.all([planItemPatch, tasksPatch]);
     fireSkipWebhook(item);
-    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     setPushItem(null);
     setPickDateOpen(false);
     setExpandedId(null);
   };
 
   const handleActuallyDone = (item: PlanItem) => {
-    updatePlanItem.mutateAsync({ id: item.id, status: 'pending' }).then(() => {
-      openDoneDialog({ ...item, status: 'pending' });
+    updatePlanItem.mutateAsync({ id: item.id, status: "pending" }).then(() => {
+      openDoneDialog({ ...item, status: "pending" });
     });
   };
 
@@ -279,8 +303,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     await updateDuration.mutateAsync({ id: item.id, est_minutes: newMinutes, end_time: newEndTime });
     if (item.calendar_event_id) {
       fetch(UPDATE_EVENT_WEBHOOK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           eventId: item.calendar_event_id,
           start: pacificIso(dateString, item.start_time),
@@ -308,9 +332,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
   const handleTimeEdit = async (item: PlanItem, newTime24: string) => {
     const command = `move ${item.title} to ${formatTime12h(newTime24)}`;
-    console.warn('[time-edit] submitting command=', command);
-    const toastId = toast.loading('Updating plan…', {
-      style: { background: '#5C3D1E', color: '#fff', border: 'none' },
+    console.warn("[time-edit] submitting command=", command);
+    const toastId = toast.loading("Updating plan…", {
+      style: { background: "#5C3D1E", color: "#fff", border: "none" },
     });
     try {
       const res = await submitPlanRevision({
@@ -319,16 +343,16 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         planItems: planItems ?? [],
         viewTomorrow: false,
       });
-      console.warn('[time-edit] revision flow response received');
-      if (res.action === 'revision') {
-        queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
-        toast.success(res.message || 'Plan updated', { id: toastId });
+      console.warn("[time-edit] revision flow response received");
+      if (res.action === "revision") {
+        queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+        toast.success(res.message || "Plan updated", { id: toastId });
       } else {
-        toast(res.message || 'Done', { id: toastId });
+        toast(res.message || "Done", { id: toastId });
       }
     } catch (e) {
-      console.error('[time-edit] revision flow error', e);
-      toast.error('Could not reach the server.', { id: toastId });
+      console.error("[time-edit] revision flow error", e);
+      toast.error("Could not reach the server.", { id: toastId });
     }
   };
 
@@ -342,50 +366,47 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   };
 
   const performDelete = async (item: PlanItem) => {
-    console.warn('done-delete-fix: performDelete called for item', item.id, item.title);
+    console.warn("done-delete-fix: performDelete called for item", item.id, item.title);
     const snapshot = { ...item };
 
     // Soft-delete: mark plan_items as skipped (instead of hard delete) so the AI
     // doesn't re-plan it tomorrow.
-    await supabase.from('plan_items').update({ status: 'skipped' }).eq('id', item.id);
-    console.warn('done-delete-fix: plan_items updated to skipped for', item.id);
+    await supabase.from("plan_items").update({ status: "skipped" }).eq("id", item.id);
+    console.warn("done-delete-fix: plan_items updated to skipped for", item.id);
 
     // Archive the underlying task so it stops appearing in future plans.
     let archivedTaskIds: string[] = [];
     if (item.task_id) {
-      await supabase.from('tasks').update({ status: 'archived' }).eq('id', item.task_id);
+      await supabase.from("tasks").update({ status: "archived" }).eq("id", item.task_id);
       archivedTaskIds = [item.task_id];
-      console.warn('done-delete-fix: tasks updated to archived for task_id', item.task_id);
+      console.warn("done-delete-fix: tasks updated to archived for task_id", item.task_id);
     } else {
       const titleKey = stripTitleSuffix(item.title);
-      const { data: matches } = await supabase
-        .from('tasks')
-        .select('id')
-        .ilike('name', titleKey);
+      const { data: matches } = await supabase.from("tasks").select("id").ilike("name", titleKey);
       if (matches && matches.length > 0) {
         archivedTaskIds = matches.map((m: any) => m.id);
-        await supabase.from('tasks').update({ status: 'archived' }).in('id', archivedTaskIds);
-        console.warn('done-delete-fix: tasks updated by title fallback:', titleKey);
+        await supabase.from("tasks").update({ status: "archived" }).in("id", archivedTaskIds);
+        console.warn("done-delete-fix: tasks updated by title fallback:", titleKey);
       }
     }
 
     if (item.calendar_event_id) fireSkipWebhook(item);
-    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
-    queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
 
     const hadCalendar = !!item.calendar_event_id;
     toast(`Deleted: ${item.title}`, {
-      description: hadCalendar ? 'Calendar event deleted' : undefined,
+      description: hadCalendar ? "Calendar event deleted" : undefined,
       duration: 5000,
       action: {
-        label: 'Undo',
+        label: "Undo",
         onClick: async () => {
-          await supabase.from('plan_items').update({ status: 'pending' }).eq('id', item.id);
+          await supabase.from("plan_items").update({ status: "pending" }).eq("id", item.id);
           if (archivedTaskIds.length > 0) {
-            await supabase.from('tasks').update({ status: 'active' }).in('id', archivedTaskIds);
+            await supabase.from("tasks").update({ status: "active" }).in("id", archivedTaskIds);
           }
-          queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
-          queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
         },
       },
     });
@@ -398,234 +419,27 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || viewTomorrow) return;
 
-    // Use visibleItems — the same list rendered in <SortableContext> — so indices
-    // line up and we never rewrite times for completed/skipped/deferred rows.
     const activeIdx = visibleItems.findIndex((i) => i.id === active.id);
     const overIdx = visibleItems.findIndex((i) => i.id === over.id);
     if (activeIdx < 0 || overIdx < 0) return;
 
     const draggedItem = visibleItems[activeIdx];
     const overItem = visibleItems[overIdx];
-    const prevItem = overIdx > 0 ? visibleItems[overIdx - 1] : null;
-    const referenceTime = prevItem ? prevItem.end_time : nowTime;
-    console.warn('[drag-reorder] dragged', draggedItem.title,
-      'oldStart=', draggedItem.start_time, 'droppedAtIdx=', overIdx,
-      'referenceTime=', referenceTime);
-    // Anchors cannot move and cannot be displaced past
+
+    // Externals and the active item cannot be moved
     if (draggedItem.is_external || draggedItem.id === activeItemId) return;
     if (overItem.is_external) {
-      toast('Calendar events are anchors — drop somewhere else');
-      return;
-    }
-    // Cannot drop before now
-    if (overItem.start_time < nowTime && overIdx < activeIdx) {
-      toast("Can't move past tasks earlier than now");
+      toast("Calendar events are anchors — drop somewhere else");
       return;
     }
 
     const reordered = arrayMove(visibleItems, activeIdx, overIdx);
-
-    // ===== Anchor detection =====
-    // An item is an anchor (keeps its current start/end, never re-timed) if:
-    //   - is_external (locked calendar event)
-    //   - status === 'completed' | 'skipped' | 'in_progress'
-    //   - status === 'pending' AND start_time < nowTime (already-past pending row)
-    // (completed/skipped are filtered out of visibleItems, but we keep the check for safety.)
-    const isAnchorItem = (i: typeof reordered[number]): boolean => {
-      if (i.is_external) return true;
-      if (i.status === 'completed' || i.status === 'skipped' || i.status === 'in_progress') return true;
-      if (i.status === 'pending' && i.start_time < nowTime) return true;
-      return false;
-    };
-
-    const itemAnchors = reordered.filter(isAnchorItem).map((a) => ({
-      id: a.id,
-      start: timeToMin(a.start_time),
-      end: timeToMin(a.end_time),
-    }));
-    const blockedAnchors = getStaticLockedWindows().map((w, idx) => ({
-      id: '_blocked_' + idx,
-      start: w.startMin,
-      end: w.endMin,
-    }));
-    const anchors = [...itemAnchors, ...blockedAnchors].sort((a, b) => a.start - b.start);
-    console.warn('[drag-reorder] anchors=', anchors);
-
-    // ===== Hard stop for today (Pacific) =====
-    const pacWeekday = new Date(
-      new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }),
-    ).getDay(); // 0=Sun..6=Sat
-    let hardStopMin: number | null;
-    if (pacWeekday === 0) hardStopMin = 0; // Sunday: no scheduling
-    else if (pacWeekday === 6) hardStopMin = 16 * 60; // Saturday 4 PM
-    else hardStopMin = 18 * 60; // Weekday 6 PM
-    const hardStopLabel = pacWeekday === 6 ? '4:00 PM' : '6:00 PM';
-
-    if (pacWeekday === 0) {
-      toast("Can't reorder — Sunday is a rest day.");
-      return;
-    }
-
-    // ===== Cursor start: round nowTime up to next 15-min boundary, never before 6 AM =====
-    const round15Up = (m: number) => Math.ceil(m / 15) * 15;
-    let cursor = Math.max(round15Up(timeToMin(nowTime)), 6 * 60);
-    // If cursor lands inside any anchor (item or blocked window), push it past.
-    let pushed = true;
-    while (pushed) {
-      pushed = false;
-      for (const a of anchors) {
-        if (cursor >= a.start && cursor < a.end) {
-          cursor = a.end;
-          pushed = true;
-          break;
-        }
-      }
-    }
-    console.warn('[drag-reorder] cursor start after block-skip=', cursor);
-
-    const updates: { id: string; start_time: string; end_time: string; sort_order: number }[] = [];
-
-    for (let i = 0; i < reordered.length; i++) {
-      const item = reordered[i];
-      const dur = (item.est_minutes ?? Math.max(15, timeToMin(item.end_time) - timeToMin(item.start_time))) || 30;
-
-      if (isAnchorItem(item)) {
-        // Keep its original times. Advance cursor past it so later items don't overlap.
-        cursor = Math.max(cursor, timeToMin(item.end_time));
-        updates.push({
-          id: item.id,
-          start_time: item.start_time,
-          end_time: item.end_time,
-          sort_order: i,
-        });
-        continue;
-      }
-
-      // Push cursor past any blocked windows it currently sits inside.
-      let p = true;
-      while (p) {
-        p = false;
-        for (const a of anchors) {
-          if (cursor >= a.start && cursor < a.end) {
-            cursor = a.end;
-            p = true;
-            break;
-          }
-        }
-      }
-      // If next anchor starts before cursor+dur, jump past it.
-      const blockingAnchor = anchors.find((a) => a.start >= cursor && a.start < cursor + dur);
-      if (blockingAnchor) cursor = blockingAnchor.end;
-
-      const start = cursor;
-      const end = start + dur;
-
-      // Hard-stop check
-      if (end > hardStopMin) {
-        console.warn('[drag-reorder] rejected — item', item.title, 'would end at', minToTime(end), 'past hardStop', minToTime(hardStopMin));
-        toast(`Can't reorder — would push tasks past today's ${hardStopLabel}.`);
-        return;
-      }
-
-      updates.push({
-        id: item.id,
-        start_time: minToTime(start),
-        end_time: minToTime(end),
-        sort_order: i,
-      });
-      cursor = end;
-      console.warn('[drag-reorder] placed', item.title, 'at', minToTime(start), '-', minToTime(end));
-    }
-
-    // Optimistically update cache to feel instant
-    queryClient.setQueryData(['daily-plan', 'items-by-date', dateString], () => {
-      return updates.map((u) => {
-        const orig = sortedItems.find((s) => s.id === u.id)!;
-        return { ...orig, ...u };
-      });
-    });
-
-    // Track which items had a calendar_event_id and changed time → out of sync
-    const newOutOfSync = new Set(outOfSyncIds);
-    for (const u of updates) {
-      const orig = sortedItems.find((s) => s.id === u.id)!;
-      if (orig.calendar_event_id && (orig.start_time !== u.start_time || orig.end_time !== u.end_time)) {
-        newOutOfSync.add(u.id);
-      }
-    }
-    setOutOfSyncIds(newOutOfSync);
-
-    // Persist
-    await Promise.all(
-      updates.map((u) =>
-        supabase
-          .from('plan_items')
-          .update({ start_time: u.start_time, end_time: u.end_time, sort_order: u.sort_order })
-          .eq('id', u.id),
-      ),
-    );
-
-    // Sync moved calendar events instantly via n8n webhook
-    const calendarUpdates = updates
-      .map((u) => ({ u, orig: sortedItems.find((s) => s.id === u.id)! }))
-      .filter(
-        ({ u, orig }) =>
-          orig.calendar_event_id &&
-          (orig.start_time !== u.start_time || orig.end_time !== u.end_time),
-      );
-
-    if (calendarUpdates.length > 0) {
-      const results = await Promise.all(
-        calendarUpdates.map(async ({ u, orig }) => {
-          const body = {
-            eventId: orig.calendar_event_id,
-            start: pacificIso(dateString, u.start_time),
-            end: pacificIso(dateString, u.end_time),
-            title: orig.title,
-            category: orig.category,
-            planItemId: orig.id,
-          };
-          console.warn('[update-event] POST', UPDATE_EVENT_WEBHOOK, body);
-          try {
-            const res = await fetch(UPDATE_EVENT_WEBHOOK, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
-            });
-            const text = await res.text();
-            console.warn('[update-event] response', res.status, text);
-            let data: any = {};
-            try { data = text ? JSON.parse(text) : {}; } catch { /* non-json ok */ }
-            return { id: u.id, ok: res.ok && data?.success !== false };
-          } catch (err: any) {
-            console.error('[update-event] error', err?.message, err?.stack);
-            return { id: u.id, ok: false };
-          }
-        }),
-      );
-      const okIds = results.filter((r) => r.ok).map((r) => r.id);
-      const failed = results.filter((r) => !r.ok).length;
-      if (okIds.length > 0) {
-        toast.success(okIds.length === 1 ? 'Calendar synced' : `Calendar synced (${okIds.length})`);
-        // Clear out-of-sync flags for successfully-synced items
-        setOutOfSyncIds((prev) => {
-          const next = new Set(prev);
-          okIds.forEach((id) => next.delete(id));
-          return next;
-        });
-      }
-      if (failed > 0) {
-        toast.error('Calendar update failed (task time saved)');
-      }
-    } else {
-      toast.success('Reordered');
-    }
-
-    queryClient.invalidateQueries({ queryKey: ['daily-plan'] });
+    setLocalOrder(reordered.map((i) => i.id));
+    toast("Reordered — hit Regenerate to apply");
   };
 
   if (isLoading) return null;
@@ -633,18 +447,18 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   if (!viewTomorrow && pausedToday) {
     const isSingleDay = pausedToday.start_date === pausedToday.end_date;
     const fmt = (s: string) => {
-      const [y, m, d] = s.split('-').map(Number);
-      return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const [y, m, d] = s.split("-").map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     };
     return (
       <div>
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
         <div
           className="rounded-[14px] p-6 text-center mb-2"
-          style={{ backgroundColor: 'hsl(var(--card))', border: '1.5px solid #B8906C' }}
+          style={{ backgroundColor: "hsl(var(--card))", border: "1.5px solid #B8906C" }}
         >
-          <p className="text-[18px] font-medium" style={{ color: '#5C3D1E' }}>
-            {isSingleDay ? 'Paused' : `Paused ${fmt(pausedToday.start_date)} to ${fmt(pausedToday.end_date)}`}
+          <p className="text-[18px] font-medium" style={{ color: "#5C3D1E" }}>
+            {isSingleDay ? "Paused" : `Paused ${fmt(pausedToday.start_date)} to ${fmt(pausedToday.end_date)}`}
           </p>
         </div>
         {addButton}
@@ -652,12 +466,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     );
   }
 
-
   if (viewTomorrow && !sortedItems.length) {
     return (
       <div>
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
-        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}>
+        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: "0.5px solid rgba(0,0,0,0.04)" }}>
           <p className="text-[14px] text-muted-foreground">Tomorrow's plan hasn't been generated yet.</p>
           <p className="text-[13px] text-muted-foreground mt-1">It will arrive at 9pm tonight.</p>
         </div>
@@ -682,11 +495,16 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
               className="flex items-center gap-2.5 py-2 px-2 min-h-[40px]"
               style={{ borderLeft: `3px solid #eee` }}
             >
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
-              <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px]">{formatTime12h(item.start_time)}</span>
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: getCategoryColor(item.category) }}
+              />
+              <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px]">
+                {formatTime12h(item.start_time)}
+              </span>
               <span className="flex-1 text-[14px] text-foreground truncate">{item.title}</span>
               <span className="text-[12px] text-muted-foreground flex-shrink-0">
-                {item.is_calendar_event ? '' : `${item.est_minutes || 0}m`}
+                {item.is_calendar_event ? "" : `${item.est_minutes || 0}m`}
               </span>
             </div>
           ))}
@@ -704,15 +522,17 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         <div
           className="rounded-[14px] p-4 md:p-5 mb-4"
           style={{
-            backgroundColor: 'hsl(var(--card))',
-            border: '1.5px solid #E8A84C',
-            borderLeftWidth: '4px',
-            borderLeftColor: '#E8A84C',
+            backgroundColor: "hsl(var(--card))",
+            border: "1.5px solid #E8A84C",
+            borderLeftWidth: "4px",
+            borderLeftColor: "#E8A84C",
           }}
         >
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold tracking-wider" style={{ color: '#E8A84C' }}>NOW</span>
+              <span className="text-[11px] font-bold tracking-wider" style={{ color: "#E8A84C" }}>
+                NOW
+              </span>
               {activeIsOverdue && (
                 <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground ml-1">
                   Overdue
@@ -740,14 +560,14 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
             <button
               onClick={() => setPushItem(activeItem)}
               className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border"
-              style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}
+              style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
             >
               Push
             </button>
             <button
               onClick={() => openDoneDialog(activeItem)}
               className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] text-white"
-              style={{ backgroundColor: '#059669' }}
+              style={{ backgroundColor: "#059669" }}
             >
               ✓ Done
             </button>
@@ -764,7 +584,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
           <div className="space-y-0">
             {visibleItems.map((item) => {
               const pendingComplete = pendingCompleteIds.has(item.id);
-              const displayItem = pendingComplete ? { ...item, status: 'completed' } : item;
+              const displayItem = pendingComplete ? { ...item, status: "completed" } : item;
               return (
                 <ScheduleRow
                   key={item.id}
@@ -806,9 +626,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
                   onClick={() => setActualMinutes(m)}
                   className="px-3 py-1.5 rounded-lg text-[13px] font-medium border min-h-[36px]"
                   style={{
-                    borderColor: actualMinutes === m ? '#B8906C' : 'hsl(var(--border))',
-                    backgroundColor: actualMinutes === m ? '#B8906C' : 'transparent',
-                    color: actualMinutes === m ? '#fff' : 'hsl(var(--foreground))',
+                    borderColor: actualMinutes === m ? "#B8906C" : "hsl(var(--border))",
+                    backgroundColor: actualMinutes === m ? "#B8906C" : "transparent",
+                    color: actualMinutes === m ? "#fff" : "hsl(var(--foreground))",
                   }}
                 >
                   {m}m
@@ -816,12 +636,23 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <Input type="number" min={0} value={actualMinutes} onChange={(e) => setActualMinutes(Number(e.target.value))} className="w-24 text-center" />
+              <Input
+                type="number"
+                min={0}
+                value={actualMinutes}
+                onChange={(e) => setActualMinutes(Number(e.target.value))}
+                className="w-24 text-center"
+              />
               <span className="text-[13px] text-muted-foreground">minutes</span>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSaveDone} disabled={updatePlanItem.isPending} className="w-full rounded-xl" style={{ backgroundColor: '#059669' }}>
+            <Button
+              onClick={handleSaveDone}
+              disabled={updatePlanItem.isPending}
+              className="w-full rounded-xl"
+              style={{ backgroundColor: "#059669" }}
+            >
               Save
             </Button>
           </DialogFooter>
@@ -829,7 +660,15 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       </Dialog>
 
       {/* Push picker */}
-      <Dialog open={!!pushItem} onOpenChange={(o) => { if (!o) { setPushItem(null); setPickDateOpen(false); } }}>
+      <Dialog
+        open={!!pushItem}
+        onOpenChange={(o) => {
+          if (!o) {
+            setPushItem(null);
+            setPickDateOpen(false);
+          }
+        }}
+      >
         <DialogContent className="max-w-[320px] rounded-[18px]">
           <DialogHeader>
             <DialogTitle className="text-[16px]">Push this task</DialogTitle>
@@ -837,20 +676,39 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
           <p className="text-[13px] text-muted-foreground mb-1">{pushItem?.title}</p>
           {!pickDateOpen ? (
             <div className="space-y-2 pt-2">
-              <button onClick={() => pushItem && handlePushTomorrow(pushItem)} className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left" style={{ borderColor: 'hsl(var(--border))' }}>
+              <button
+                onClick={() => pushItem && handlePushTomorrow(pushItem)}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
+                style={{ borderColor: "hsl(var(--border))" }}
+              >
                 Tomorrow
               </button>
-              <button onClick={() => pushItem && handleDefer(pushItem, getNextMonday(1))} className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left" style={{ borderColor: 'hsl(var(--border))' }}>
+              <button
+                onClick={() => pushItem && handleDefer(pushItem, getNextMonday(1))}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
+                style={{ borderColor: "hsl(var(--border))" }}
+              >
                 Next Week
               </button>
-              <button onClick={() => pushItem && handleDefer(pushItem, getNextMonday(2))} className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left" style={{ borderColor: 'hsl(var(--border))' }}>
+              <button
+                onClick={() => pushItem && handleDefer(pushItem, getNextMonday(2))}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
+                style={{ borderColor: "hsl(var(--border))" }}
+              >
                 2 Weeks
               </button>
-              <button onClick={() => setPickDateOpen(true)} className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left flex items-center gap-2" style={{ borderColor: 'hsl(var(--border))' }}>
+              <button
+                onClick={() => setPickDateOpen(true)}
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left flex items-center gap-2"
+                style={{ borderColor: "hsl(var(--border))" }}
+              >
                 <CalendarDays size={16} className="text-muted-foreground" />
                 Pick a Date
               </button>
-              <button onClick={() => setPushItem(null)} className="w-full text-center text-[13px] text-muted-foreground pt-1">
+              <button
+                onClick={() => setPushItem(null)}
+                className="w-full text-center text-[13px] text-muted-foreground pt-1"
+              >
                 Cancel
               </button>
             </div>
@@ -866,7 +724,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
                 disabled={(date) => date < new Date()}
                 className={cn("p-3 pointer-events-auto")}
               />
-              <button onClick={() => setPickDateOpen(false)} className="w-full text-center text-[13px] text-muted-foreground pt-2">
+              <button
+                onClick={() => setPickDateOpen(false)}
+                className="w-full text-center text-[13px] text-muted-foreground pt-2"
+              >
                 Back
               </button>
             </div>
@@ -884,15 +745,12 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              className="rounded-xl"
-              style={{ borderColor: '#B8906C', color: '#5C3D1E' }}
-            >
+            <AlertDialogCancel className="rounded-xl" style={{ borderColor: "#B8906C", color: "#5C3D1E" }}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               className="rounded-xl text-white hover:opacity-90"
-              style={{ backgroundColor: '#C44' }}
+              style={{ backgroundColor: "#C44" }}
               onClick={() => {
                 const it = confirmDeleteItem;
                 setConfirmDeleteItem(null);
@@ -929,9 +787,23 @@ interface RowProps {
 const SWIPE_REVEAL = 80;
 const SWIPE_THRESHOLD = 40;
 
-function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPush, onDone, onActuallyDone, outOfSync, overlaps, onChangeDuration, lockedWindows, onChangeStartTime }: RowProps) {
-  const isCompleted = item.status === 'completed';
-  const isSkipped = item.status === 'skipped';
+function ScheduleRow({
+  item,
+  isActive,
+  expanded,
+  onToggleExpand,
+  onDelete,
+  onPush,
+  onDone,
+  onActuallyDone,
+  outOfSync,
+  overlaps,
+  onChangeDuration,
+  lockedWindows,
+  onChangeStartTime,
+}: RowProps) {
+  const isCompleted = item.status === "completed";
+  const isSkipped = item.status === "skipped";
   const isPending = !isCompleted && !isSkipped;
   const isExternal = item.is_external === true;
   const isLocalOnly = item.local_only === true;
@@ -1057,7 +929,7 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
   // active swipe state so we don't leave a Delete pad showing on a row that's about
   // to vanish from the timeline.
   useEffect(() => {
-    if (revealed && (isCompleted || isSkipped || item.status === 'deferred')) {
+    if (revealed && (isCompleted || isSkipped || item.status === "deferred")) {
       setTranslateX(0);
       setRevealed(false);
     }
@@ -1080,121 +952,124 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
       }
     };
     // Use capture so we run before any handler that might stopPropagation.
-    document.addEventListener('pointerdown', onDocPointerDown, true);
-    return () => document.removeEventListener('pointerdown', onDocPointerDown, true);
+    document.addEventListener("pointerdown", onDocPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onDocPointerDown, true);
   }, [revealed, item.id]);
 
-  let borderColor = '#eee';
-  if (isActive) borderColor = '#E8A84C';
-  else if (isCompleted || isSkipped) borderColor = '#ddd';
+  let borderColor = "#eee";
+  if (isActive) borderColor = "#E8A84C";
+  else if (isCompleted || isSkipped) borderColor = "#ddd";
 
   const dragStyle = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 20 : 'auto' as any,
-    boxShadow: isDragging ? '0 8px 20px rgba(0,0,0,0.12)' : undefined,
-    backgroundColor: isDragging ? '#FFF8F0' : undefined,
+    zIndex: isDragging ? 20 : ("auto" as any),
+    boxShadow: isDragging ? "0 8px 20px rgba(0,0,0,0.12)" : undefined,
+    backgroundColor: isDragging ? "#FFF8F0" : undefined,
   };
 
   return (
     <div ref={setRefs} style={dragStyle} className="relative rounded-md" data-row-id={item.id}>
       <div className="relative overflow-hidden rounded-md">
-      {/* Red delete pad — under the row (only as tall as the row, never the expanded panel) */}
-      {canSwipe && (
-        <button
-          onClick={handleDeleteClick}
-          className="absolute top-0 right-0 bottom-0 flex items-center justify-center text-white"
-          style={{ width: SWIPE_REVEAL, backgroundColor: '#C44' }}
-          aria-label="Delete task"
-          tabIndex={revealed ? 0 : -1}
-        >
-          <Trash2 size={16} />
-        </button>
-      )}
-
-      <div
-        className={`flex items-center gap-1 py-2 px-2 min-h-[40px] bg-card relative`}
-        style={{
-          borderLeft: `3px solid ${borderColor}`,
-          opacity: (isCompleted || isSkipped) ? 0.5 : 1,
-          transform: `translateX(${translateX}px)`,
-          transition: startX.current !== null ? 'none' : 'transform 0.18s ease-out',
-          ...(isExternal ? { backgroundColor: '#EEF4FF', borderRadius: '8px', borderLeft: `3px solid #93C5FD` } : {}),
-        }}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        onClick={handleRowClick}
-      >
-        {/* Drag handle */}
-        {canDrag ? (
+        {/* Red delete pad — under the row (only as tall as the row, never the expanded panel) */}
+        {canSwipe && (
           <button
-            {...attributes}
-            {...listeners}
-            onClick={(e) => e.stopPropagation()}
-            className="touch-none -ml-1 p-1 rounded flex-shrink-0 cursor-grab active:cursor-grabbing"
-            style={{ color: 'rgba(139, 115, 85, 0.6)' }}
-            aria-label="Drag to reorder"
+            onClick={handleDeleteClick}
+            className="absolute top-0 right-0 bottom-0 flex items-center justify-center text-white"
+            style={{ width: SWIPE_REVEAL, backgroundColor: "#C44" }}
+            aria-label="Delete task"
+            tabIndex={revealed ? 0 : -1}
           >
-            <GripVertical size={14} />
+            <Trash2 size={16} />
           </button>
-        ) : (
-          <div className="w-[22px] flex-shrink-0" />
         )}
 
-        {isExternal ? (
-          <Calendar size={12} className="flex-shrink-0" style={{ color: '#3B82F6' }} />
-        ) : isCompleted ? (
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#059669' }} />
-        ) : isSkipped ? (
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#aaa' }} />
-        ) : (
-          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: getCategoryColor(item.category) }} />
-        )}
-
-        <StartTimePicker
-          rowId={item.id}
-          value={item.start_time}
-          lockedWindows={lockedWindows}
-          disabled={isExternal || lockedActive || !isPending}
-          onPick={(t) => onChangeStartTime(t)}
-          className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1 text-left"
-          style={isExternal ? { color: '#3B82F6' } : undefined}
-        />
-
-        <span
-          className={`flex-1 text-[14px] truncate ${isActive ? 'font-bold' : ''} ${isSkipped ? 'line-through' : ''}`}
-          style={{ color: isExternal ? '#3B82F6' : 'hsl(var(--foreground))' }}
+        <div
+          className={`flex items-center gap-1 py-2 px-2 min-h-[40px] bg-card relative`}
+          style={{
+            borderLeft: `3px solid ${borderColor}`,
+            opacity: isCompleted || isSkipped ? 0.5 : 1,
+            transform: `translateX(${translateX}px)`,
+            transition: startX.current !== null ? "none" : "transform 0.18s ease-out",
+            ...(isExternal ? { backgroundColor: "#EEF4FF", borderRadius: "8px", borderLeft: `3px solid #93C5FD` } : {}),
+          }}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onClick={handleRowClick}
         >
-          {item.title}
-        </span>
+          {/* Drag handle */}
+          {canDrag ? (
+            <button
+              {...attributes}
+              {...listeners}
+              onClick={(e) => e.stopPropagation()}
+              className="touch-none -ml-1 p-1 rounded flex-shrink-0 cursor-grab active:cursor-grabbing"
+              style={{ color: "rgba(139, 115, 85, 0.6)" }}
+              aria-label="Drag to reorder"
+            >
+              <GripVertical size={14} />
+            </button>
+          ) : (
+            <div className="w-[22px] flex-shrink-0" />
+          )}
 
-        {outOfSync && (
-          <span title="Calendar event out of sync — will re-sync at next 9pm planner run">
-            <AlertCircle size={13} className="flex-shrink-0" style={{ color: '#E8A84C' }} />
-          </span>
-        )}
+          {isExternal ? (
+            <Calendar size={12} className="flex-shrink-0" style={{ color: "#3B82F6" }} />
+          ) : isCompleted ? (
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#059669" }} />
+          ) : isSkipped ? (
+            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#aaa" }} />
+          ) : (
+            <div
+              className="w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: getCategoryColor(item.category) }}
+            />
+          )}
 
-        {overlaps && (
-          <span title="Overlaps with the task above">
-            <AlertCircle size={13} className="flex-shrink-0" style={{ color: '#C44' }} />
-          </span>
-        )}
-
-        {isCompleted && <Check size={13} style={{ color: '#059669' }} className="flex-shrink-0" />}
-
-        {!isExternal && (
-          <DurationPicker
-            value={item.est_minutes || 0}
-            disabled={isExternal || isCompleted || isSkipped || item.status === 'deferred'}
-            onChange={onChangeDuration}
+          <StartTimePicker
+            rowId={item.id}
+            value={item.start_time}
+            lockedWindows={lockedWindows}
+            disabled={isExternal || lockedActive || !isPending}
+            onPick={(t) => onChangeStartTime(t)}
+            className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1 text-left"
+            style={isExternal ? { color: "#3B82F6" } : undefined}
           />
-        )}
-      </div>
+
+          <span
+            className={`flex-1 text-[14px] truncate ${isActive ? "font-bold" : ""} ${isSkipped ? "line-through" : ""}`}
+            style={{ color: isExternal ? "#3B82F6" : "hsl(var(--foreground))" }}
+          >
+            {item.title}
+          </span>
+
+          {outOfSync && (
+            <span title="Calendar event out of sync — will re-sync at next 9pm planner run">
+              <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#E8A84C" }} />
+            </span>
+          )}
+
+          {overlaps && (
+            <span title="Overlaps with the task above">
+              <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#C44" }} />
+            </span>
+          )}
+
+          {isCompleted && <Check size={13} style={{ color: "#059669" }} className="flex-shrink-0" />}
+
+          {!isExternal && (
+            <DurationPicker
+              value={item.est_minutes || 0}
+              disabled={isExternal || isCompleted || isSkipped || item.status === "deferred"}
+              onChange={onChangeDuration}
+            />
+          )}
+        </div>
       </div>
 
       {expanded && (
-        <div className="ml-3 mb-2 p-3 rounded-lg" style={{ backgroundColor: '#FFF8F0', border: '1px solid #E8D5B8' }}>
+        <div className="ml-3 mb-2 p-3 rounded-lg" style={{ backgroundColor: "#FFF8F0", border: "1px solid #E8D5B8" }}>
           <p className="text-[14px] font-medium text-foreground mb-0.5">{item.title}</p>
           <p className="text-[12px] text-muted-foreground mb-2">
             {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
@@ -1203,16 +1078,27 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
           </p>
           {isPending && (
             <div className="flex gap-2">
-              <button onClick={onPush} className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]" style={{ borderColor: 'hsl(var(--border))', color: 'hsl(var(--muted-foreground))' }}>
+              <button
+                onClick={onPush}
+                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]"
+                style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
+              >
                 Push
               </button>
-              <button onClick={onDone} className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]" style={{ backgroundColor: '#059669' }}>
+              <button
+                onClick={onDone}
+                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]"
+                style={{ backgroundColor: "#059669" }}
+              >
                 ✓ Done
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
                 className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]"
-                style={{ backgroundColor: '#C44' }}
+                style={{ backgroundColor: "#C44" }}
                 aria-label="Delete task"
               >
                 Delete
@@ -1220,11 +1106,19 @@ function ScheduleRow({ item, isActive, expanded, onToggleExpand, onDelete, onPus
             </div>
           )}
           {isSkipped && (
-            <button onClick={onActuallyDone} className="px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]" style={{ borderColor: '#059669', color: '#059669' }}>
+            <button
+              onClick={onActuallyDone}
+              className="px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]"
+              style={{ borderColor: "#059669", color: "#059669" }}
+            >
               Actually Done
             </button>
           )}
-          {isCompleted && <p className="text-[13px] font-medium" style={{ color: '#059669' }}>✓ Completed</p>}
+          {isCompleted && (
+            <p className="text-[13px] font-medium" style={{ color: "#059669" }}>
+              ✓ Completed
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -1239,8 +1133,8 @@ function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onTogg
           onClick={viewTomorrow ? onToggle : undefined}
           className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
           style={{
-            backgroundColor: !viewTomorrow ? '#B8906C' : '#E8DDD0',
-            color: !viewTomorrow ? '#fff' : '#3D3225',
+            backgroundColor: !viewTomorrow ? "#B8906C" : "#E8DDD0",
+            color: !viewTomorrow ? "#fff" : "#3D3225",
           }}
         >
           Today
@@ -1249,8 +1143,8 @@ function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onTogg
           onClick={!viewTomorrow ? onToggle : undefined}
           className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
           style={{
-            backgroundColor: viewTomorrow ? '#B8906C' : '#E8DDD0',
-            color: viewTomorrow ? '#fff' : '#3D3225',
+            backgroundColor: viewTomorrow ? "#B8906C" : "#E8DDD0",
+            color: viewTomorrow ? "#fff" : "#3D3225",
           }}
         >
           Tomorrow
