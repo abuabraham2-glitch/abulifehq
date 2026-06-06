@@ -478,7 +478,22 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     );
   }
 
-  if (!sortedItems.length) return null;
+  // Today is empty (plan row exists but no items): still render the tabs so the
+  // Tomorrow view stays reachable. Show a small empty-today message under them.
+  if (!viewTomorrow && !sortedItems.length) {
+    return (
+      <div>
+        <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
+        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: "0.5px solid rgba(0,0,0,0.04)" }}>
+          <p className="text-[14px] text-muted-foreground">No tasks scheduled for today.</p>
+          <p className="text-[13px] text-muted-foreground mt-1">
+            Tap Tomorrow to see tomorrow's plan, or Regenerate to build today.
+          </p>
+        </div>
+        {addButton}
+      </div>
+    );
+  }
 
   const quickMinutes = [15, 30, 45, 60, 90];
 
