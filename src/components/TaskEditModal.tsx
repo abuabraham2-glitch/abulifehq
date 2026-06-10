@@ -1,13 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useUpdateTask, useCompleteTask, useDeleteTask, type Task } from '@/hooks/useTasks';
-import { CATEGORIES, calcQuadrant } from '@/lib/constants';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUpdateTask, useCompleteTask, type Task } from "@/hooks/useTasks";
+import { CATEGORIES, calcQuadrant } from "@/lib/constants";
+import { toast } from "@/hooks/use-toast";
 
 interface Props {
   task: Task | null;
@@ -16,26 +15,24 @@ interface Props {
 }
 
 export function TaskEditModal({ task, open, onOpenChange }: Props) {
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState('');
-  const [importance, setImportance] = useState('');
-  const [urgency, setUrgency] = useState('');
-  const [estMinutes, setEstMinutes] = useState('');
-  const [notes, setNotes] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
+  const [importance, setImportance] = useState("");
+  const [urgency, setUrgency] = useState("");
+  const [estMinutes, setEstMinutes] = useState("");
+  const [notes, setNotes] = useState("");
 
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
-  const deleteTask = useDeleteTask();
 
   useEffect(() => {
     if (task) {
       setName(task.name);
-      setCategory(task.category || '');
-      setImportance(task.importance || '');
-      setUrgency(task.urgency || '');
-      setEstMinutes(task.est_minutes?.toString() || '');
-      setNotes(task.notes || '');
+      setCategory(task.category || "");
+      setImportance(task.importance || "");
+      setUrgency(task.urgency || "");
+      setEstMinutes(task.est_minutes?.toString() || "");
+      setNotes(task.notes || "");
     }
   }, [task]);
 
@@ -55,116 +52,118 @@ export function TaskEditModal({ task, open, onOpenChange }: Props) {
         notes: notes || null,
         needs_triage: false,
       });
-      toast({ title: 'Task updated' });
+      toast({ title: "Task updated" });
       onOpenChange(false);
     } catch {
-      toast({ title: 'Error', description: 'Failed to update.', variant: 'destructive' });
+      toast({ title: "Error", description: "Failed to update.", variant: "destructive" });
     }
   };
 
   const handleComplete = async () => {
     if (!task) return;
     await completeTask.mutateAsync(task.id);
-    toast({ title: 'Task completed ✓' });
+    toast({ title: "Task completed ✓" });
     onOpenChange(false);
   };
 
   const handleArchive = async () => {
     if (!task) return;
-    await updateTask.mutateAsync({ id: task.id, status: 'archived' });
-    toast({ title: 'Task archived' });
-    onOpenChange(false);
-  };
-
-  const handleDelete = async () => {
-    if (!task) return;
     try {
-      await deleteTask.mutateAsync(task.id);
-      toast({ title: 'Task deleted' });
-      setShowDeleteConfirm(false);
+      await updateTask.mutateAsync({ id: task.id, status: "archived" });
+      toast({
+        title: "Task archived",
+        description: "Find it under Status: Archived. Use Purge All there to delete permanently.",
+      });
       onOpenChange(false);
     } catch {
-      toast({ title: 'Error', description: 'Failed to delete.', variant: 'destructive' });
+      toast({ title: "Error", description: "Failed to archive.", variant: "destructive" });
     }
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-base font-medium">Edit Task</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <Input placeholder="Task name" value={name} onChange={(e) => setName(e.target.value)} />
-            <div className="grid grid-cols-2 gap-3">
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Input
-                type="number"
-                placeholder="Est. minutes"
-                value={estMinutes}
-                onChange={(e) => setEstMinutes(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Select value={importance} onValueChange={setImportance}>
-                <SelectTrigger><SelectValue placeholder="Importance" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Important">Important</SelectItem>
-                  <SelectItem value="Not Important">Not Important</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={urgency} onValueChange={setUrgency}>
-                <SelectTrigger><SelectValue placeholder="Urgency" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Urgent">Urgent</SelectItem>
-                  <SelectItem value="Not Urgent">Not Urgent</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {importance && urgency && (
-              <p className="text-xs text-muted-foreground">Quadrant: <span className="font-medium text-foreground">{quadrant}</span></p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-base font-medium">Edit Task</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <Input placeholder="Task name" value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="grid grid-cols-2 gap-3">
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              placeholder="Est. minutes"
+              value={estMinutes}
+              onChange={(e) => setEstMinutes(e.target.value)}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Select value={importance} onValueChange={setImportance}>
+              <SelectTrigger>
+                <SelectValue placeholder="Importance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Important">Important</SelectItem>
+                <SelectItem value="Not Important">Not Important</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={urgency} onValueChange={setUrgency}>
+              <SelectTrigger>
+                <SelectValue placeholder="Urgency" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Urgent">Urgent</SelectItem>
+                <SelectItem value="Not Urgent">Not Urgent</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {importance && urgency && (
+            <p className="text-xs text-muted-foreground">
+              Quadrant: <span className="font-medium text-foreground">{quadrant}</span>
+            </p>
+          )}
+          <Textarea
+            placeholder="Notes..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            className="resize-none"
+          />
+          <div className="flex gap-2 pt-2">
+            <Button
+              onClick={handleSave}
+              disabled={updateTask.isPending}
+              className="flex-1"
+              style={{ backgroundColor: "#2C2A25", color: "#F5F0E8" }}
+            >
+              Save
+            </Button>
+            {task?.status === "active" && (
+              <Button
+                onClick={handleComplete}
+                variant="outline"
+                className="text-[#059669] border-[#059669]/30 hover:bg-[#059669]/5"
+              >
+                Complete
+              </Button>
             )}
-            <Textarea placeholder="Notes..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="resize-none" />
-            <div className="flex gap-2 pt-2">
-              <Button onClick={handleSave} disabled={updateTask.isPending} className="flex-1" style={{ backgroundColor: '#2C2A25', color: '#F5F0E8' }}>
-                Save
-              </Button>
-              {task?.status === 'active' && (
-                <Button onClick={handleComplete} variant="outline" className="text-[#059669] border-[#059669]/30 hover:bg-[#059669]/5">
-                  Complete
-                </Button>
-              )}
-              <Button onClick={handleArchive} variant="outline" className="text-muted-foreground">
-                Archive
-              </Button>
-            </div>
-            <Button onClick={() => setShowDeleteConfirm(true)} variant="outline" className="w-full text-destructive border-destructive/30 hover:bg-destructive/5">
-              Delete
+            <Button onClick={handleArchive} variant="outline" className="text-muted-foreground">
+              Archive
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure you want to delete this task?</AlertDialogTitle>
-            <AlertDialogDescription>This cannot be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
