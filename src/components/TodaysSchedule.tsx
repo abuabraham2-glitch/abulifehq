@@ -1,5 +1,16 @@
-import { useState, useMemo, useRef, useEffect } from "react";
-import { Check, Calendar, CalendarDays, GripVertical, Trash2, AlertCircle, Pin } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import {
+  Check,
+  Clock,
+  GripVertical,
+  Lock,
+  Pin,
+  ChevronDown,
+  ChevronUp,
+  CornerRightUp,
+  AlertTriangle,
+  Trash2,
+} from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -34,25 +45,144 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-  usePlanItemsByDate,
-  useUpdatePlanItem,
-  useUpdatePlanItemDuration,
-  todayStr,
-  tomorrowStr,
-  type PlanItem,
-} from "@/hooks/useDailyPlan";
+import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from "@/hooks/useDailyPlan";
 import { useCompleteTask, useUpdateTask } from "@/hooks/useTasks";
-import { formatTime12h, getCategoryColor } from "@/lib/constants";
+import { formatTime12h } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { timeToMin, minToTime, pacificIso } from "@/lib/planScheduling";
-import { DurationPicker } from "@/components/DurationPicker";
-import { StartTimePicker, getStaticLockedWindows } from "@/components/StartTimePicker";
+import { getStaticLockedWindows } from "@/components/StartTimePicker";
 
 const SKIP_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event";
-const UPDATE_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-update-event";
 
+const C = {
+  page: "#F5F0E8",
+  focusBg: "#5C3D1E",
+  focusName: "#F5F0E8",
+  focusDur: "#EBC99C",
+  focusDone: "#9A7B5C",
+  focusGrip: "#8A6A4A",
+  gold: "#B8906C",
+  liveWallBg: "#185FA5",
+  liveWallTitle: "#FFFFFF",
+  liveWallSub: "#B5D4F4",
+  upWallBg: "#E6F1FB",
+  upWallBorder: "#378ADD",
+  upWallTitle: "#0C447C",
+  upWallTime: "#185FA5",
+  fits: "#0F6E56",
+  wontFit: "#854F0B",
+  didntBg: "#FAEEDA",
+  didntHead: "#854F0B",
+  didntItem: "#633806",
+  rowBg: "#FFFFFF",
+  rowBorder: "#E4DACB",
+  rowName: "#3A2E20",
+  rowDur: "#9A6B3F",
+  neutral: "#6B6256",
+  rowGrip: "#C9B79F",
+};
+
+type Wall = { startMin: number; endMin: number; label: string };
+type EngineTask = { id: string; name: string; durationMin: number; priority: number; pinnedStartMin?: number };
+type Placed = { id: string; name: string; startMin: number; endMin: number; pinned: boolean };
+
+function placeDay(opts: { nowMin: number; hardStopMin: number; walls: Wall[]; tasks: EngineTask[] }) {
+  const { nowMin, hardStopMin, walls, tasks } = opts;
+  const pinned = tasks.filter((t) => typeof t.pinnedStartMin === "number");
+  const flexible = tasks.filter((t) => typeof t.pinnedStartMin !== "number");
+
+  const pinnedPlaced: Placed[] = pinned.map((t) => ({
+    id: t.id,
+    name: t.name,
+    startMin: t.pinnedStartMin as number,
+    endMin: (t.pinnedStartMin as number) + t.durationMin,
+    pinned: true,
+  }));
+
+  const blocked = [
+    ...walls.map((w) => ({ startMin: w.startMin, endMin: w.endMin })),
+    ...pinnedPlaced.map((p) => ({ startMin: p.startMin, endMin: p.endMin })),
+  ].sort((a, b) => a.startMin - b.startMin);
+
+  const freeWindows: { startMin: number; endMin: number }[] = [];
+  let cursor = Math.max(nowMin, 0);
+  for (const b of blocked) {
+    if (b.endMin <= cursor) continue;
+    if (b.startMin > cursor) {
+      const winEnd = Math.min(b.startMin, hardStopMin);
+      if (winEnd > cursor) freeWindows.push({ startMin: cursor, endMin: winEnd });
+    }
+    cursor = Math.max(cursor, b.endMin);
+    if (cursor >= hardStopMin) break;
+  }
+  if (cursor < hardStopMin) freeWindows.push({ startMin: cursor, endMin: hardStopMin });
+
+  const ordered = [...flexible].sort((a, b) => a.priority - b.priority);
+  const placed: Placed[] = [];
+  const didNotFit: EngineTask[] = [];
+  const windows = freeWindows.map((w) => ({ startMin: w.startMin, endMin: w.endMin }));
+
+  for (const task of ordered) {
+    let slotted = false;
+    for (const w of windows) {
+      if (w.endMin - w.startMin >= task.durationMin) {
+        placed.push({
+          id: task.id,
+          name: task.name,
+          startMin: w.startMin,
+          endMin: w.startMin + task.durationMin,
+          pinned: false,
+        });
+        w.startMin += task.durationMin;
+        slotted = true;
+        break;
+      }
+    }
+    if (!slotted) didNotFit.push(task);
+  }
+
+  const allPlaced = [...placed, ...pinnedPlaced].sort((a, b) => a.startMin - b.startMin);
+  return { placed: allPlaced, didNotFit, freeWindows };
+}
+
+function timeToMin(t: string): number {
+  if (!t) return 0;
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+function pacificNowMin(): number {
+  const pac = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  return pac.getHours() * 60 + pac.getMinutes();
+}
+function minTo12h(min: number): string {
+  let h = Math.floor(min / 60);
+  const m = min % 60;
+  const ap = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, "0")} ${ap}`;
+}
+function fmtDur(m: number): string {
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const mm = m % 60;
+    return mm ? `${h}h ${mm}m` : `${h}h`;
+  }
+  return `${m}m`;
+}
+function hardStopMin(): number {
+  const pac = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  const day = pac.getDay();
+  if (day === 6) return 16 * 60;
+  return 18 * 60;
+}
+function stripTitleSuffix(title: string): string {
+  if (!title) return "";
+  let t = title;
+  t = t.replace(/\s+[—–-]\s+[^—–-]+$/, "");
+  t = t.replace(/\s*\([^)]*\)\s*$/, "");
+  return t.trim();
+}
 function getNextMonday(weeksAhead: number = 1): string {
   const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
   const day = d.getDay();
@@ -67,17 +197,6 @@ function formatDateStr(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
-// Strip trailing suffixes appended by the planner (e.g. " — URGENT",
-// " - PRIORITY", " (urgent)") so we can match a plan_item title back to
-// a row in `tasks` by name.
-function stripTitleSuffix(title: string): string {
-  if (!title) return "";
-  let t = title;
-  t = t.replace(/\s+[—–-]\s+[^—–-]+$/, "");
-  t = t.replace(/\s*\([^)]*\)\s*$/, "");
-  return t.trim();
-}
-
 interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
@@ -86,106 +205,136 @@ interface Props {
   pausedToday?: { start_date: string; end_date: string } | null;
 }
 
-export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = null, pausedToday = null }: Props) {
+export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedToday = null }: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
-  const updateDuration = useUpdatePlanItemDuration();
   const completeTask = useCompleteTask();
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
 
-  // Pending completions awaiting 5s undo window. Maps planItemId -> { timeoutId, duration }
-  const pendingCompletions = useRef<Map<string, { timeoutId: ReturnType<typeof setTimeout>; duration: number }>>(
-    new Map(),
-  );
+  const pendingCompletions = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [pendingCompleteIds, setPendingCompleteIds] = useState<Set<string>>(new Set());
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  // Collapse expanded row when tapping outside it (ignores Radix popovers/dialogs/toasts).
-  useEffect(() => {
-    if (!expandedId) return;
-    const handler = (e: MouseEvent | TouchEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (target.closest(`[data-row-id="${expandedId}"]`)) return;
-      if (
-        target.closest(
-          '[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"], [data-sonner-toaster], [data-radix-portal]',
-        )
-      )
-        return;
-      setExpandedId(null);
-    };
-    document.addEventListener("pointerdown", handler, true);
-    return () => document.removeEventListener("pointerdown", handler, true);
-  }, [expandedId]);
   const [pushItem, setPushItem] = useState<PlanItem | null>(null);
   const [pickDateOpen, setPickDateOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<PlanItem | null>(null);
-
-  // Out-of-sync rows after drag-reorder (calendar events whose times moved but Cal API not yet synced)
-  const [outOfSyncIds, setOutOfSyncIds] = useState<Set<string>>(new Set());
-  // Local visual order from drag — instant under-the-hand feedback. The DB write
-  // (sort_order) is the source of truth; this clears once the query re-reads.
+  const [doneStripOpen, setDoneStripOpen] = useState(false);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
-  const nowTime = useMemo(() => {
-    const pac = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
-    return `${String(pac.getHours()).padStart(2, "0")}:${String(pac.getMinutes()).padStart(2, "0")}:00`;
-  }, []);
+  const nowMin = useMemo(() => pacificNowMin(), []);
 
-  // Items load already ordered by sort_order (useDailyPlan .order('sort_order')).
-  // sort_order IS the priority truth (Master Ref 0B.1). Preserve that load order.
-  const sortedItems = useMemo(() => {
-    return [...(planItems ?? [])];
-  }, [planItems]);
+  const allRows = useMemo(() => [...(planItems ?? [])], [planItems]);
 
-  // Timeline render shows ONLY pending/in_progress rows. Completed/skipped/deferred
-  // rows are excluded entirely (Pushed today section surfaces skipped/deferred separately).
-  // Note: pendingComplete rows still pass this filter because the DB row's status is
-  // still 'pending' during the 5s undo window — only the displayed status is overridden.
-  const visibleItems = useMemo(() => {
-    const filtered = sortedItems.filter(
-      (i) => i.status !== "skipped" && i.status !== "deferred" && i.status !== "completed",
+  const wallRows = useMemo(
+    () => allRows.filter((r) => r.is_calendar_event === true || r.is_external === true),
+    [allRows],
+  );
+
+  const activeTaskRows = useMemo(() => {
+    const tasks = allRows.filter(
+      (r) =>
+        !(r.is_calendar_event === true || r.is_external === true) &&
+        r.status !== "completed" &&
+        r.status !== "skipped" &&
+        r.status !== "deferred",
     );
-    if (!localOrder) return filtered;
+    if (!localOrder) return tasks;
     const orderMap = new Map(localOrder.map((id, idx) => [id, idx]));
-    return [...filtered].sort((a, b) => {
-      const aIdx = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
-      const bIdx = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
-      return aIdx - bIdx;
+    return [...tasks].sort((a, b) => {
+      const ai = orderMap.has(a.id) ? orderMap.get(a.id)! : 9999;
+      const bi = orderMap.has(b.id) ? orderMap.get(b.id)! : 9999;
+      return ai - bi;
     });
-  }, [sortedItems, localOrder]);
+  }, [allRows, localOrder]);
 
-  const activeItemId = useMemo(() => {
-    if (viewTomorrow) return null;
-    const pending = sortedItems.filter((i) => i.status !== "completed" && i.status !== "skipped");
-    if (pending.length === 0) return null;
-    // Priority truth = sort_order = list order. Top of the list is the focus card.
-    return pending[0]?.id ?? null;
-  }, [sortedItems, viewTomorrow]);
+  const completedRows = useMemo(
+    () => allRows.filter((r) => !(r.is_calendar_event === true || r.is_external === true) && r.status === "completed"),
+    [allRows],
+  );
 
-  const activeItem = useMemo(() => sortedItems.find((i) => i.id === activeItemId) ?? null, [sortedItems, activeItemId]);
-  const activeIsOverdue = useMemo(() => {
-    if (!activeItem || viewTomorrow) return false;
-    return activeItem.start_time < nowTime;
-  }, [activeItem, nowTime, viewTomorrow]);
+  const engineWalls = useMemo<Wall[]>(() => {
+    const fromCal: Wall[] = wallRows.map((w) => ({
+      startMin: timeToMin(w.start_time),
+      endMin: timeToMin(w.end_time),
+      label: w.title,
+    }));
+    const fromRules: Wall[] = getStaticLockedWindows().map((w: any) => ({
+      startMin: w.startMin,
+      endMin: w.endMin,
+      label: "Reserved",
+    }));
+    return [...fromCal, ...fromRules].filter((w) => w.endMin > nowMin).sort((a, b) => a.startMin - b.startMin);
+  }, [wallRows, nowMin]);
 
-  // Overlap detection: a row overlaps if its start_time < previous row's end_time (sorted-timeline only)
-  const overlapIds = useMemo(() => {
-    const set = new Set<string>();
-    for (let i = 1; i < sortedItems.length; i++) {
-      const prev = sortedItems[i - 1];
-      const cur = sortedItems[i];
-      if (cur.start_time < prev.end_time) set.add(cur.id);
-    }
-    return set;
-  }, [sortedItems]);
+  const engineTasks = useMemo<EngineTask[]>(() => {
+    return activeTaskRows.map((r, idx) => ({
+      id: r.id,
+      name: r.title,
+      durationMin: r.est_minutes || 0,
+      priority: idx + 1,
+      pinnedStartMin: r.pinned_time ? timeToMin(r.pinned_time) : undefined,
+    }));
+  }, [activeTaskRows]);
+
+  const result = useMemo(
+    () => placeDay({ nowMin, hardStopMin: hardStopMin(), walls: engineWalls, tasks: engineTasks }),
+    [nowMin, engineWalls, engineTasks],
+  );
+
+  const rowById = useMemo(() => {
+    const m = new Map<string, PlanItem>();
+    for (const r of activeTaskRows) m.set(r.id, r);
+    return m;
+  }, [activeTaskRows]);
+
+  const placedTasks = useMemo(
+    () =>
+      result.placed
+        .map((p) => ({ placed: p, row: rowById.get(p.id) }))
+        .filter((x): x is { placed: Placed; row: PlanItem } => !!x.row),
+    [result, rowById],
+  );
+  const didNotFitTasks = useMemo(
+    () => result.didNotFit.map((t) => rowById.get(t.id)).filter((r): r is PlanItem => !!r),
+    [result, rowById],
+  );
+
+  const liveWall = useMemo(() => {
+    return wallRows.find((w) => {
+      const s = timeToMin(w.start_time);
+      const e = timeToMin(w.end_time);
+      return nowMin >= s && nowMin < e;
+    });
+  }, [wallRows, nowMin]);
+
+  const upcomingWalls = useMemo(() => {
+    return wallRows
+      .filter((w) => timeToMin(w.start_time) > nowMin)
+      .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))
+      .map((w) => {
+        const wallStart = timeToMin(w.start_time);
+        const needed = placedTasks
+          .filter((pt) => pt.placed.endMin <= wallStart)
+          .reduce((s, pt) => s + (pt.placed.endMin - pt.placed.startMin), 0);
+        const runway = wallStart - nowMin;
+        return { row: w, wallStart, wallEnd: timeToMin(w.end_time), needed, runway, fits: runway >= needed };
+      });
+  }, [wallRows, nowMin, placedTasks]);
+
+  const focusTask = useMemo(() => {
+    if (liveWall) return null;
+    return placedTasks.length ? placedTasks[0].row : null;
+  }, [liveWall, placedTasks]);
+
+  const streamTasks = useMemo(() => {
+    const arr = placedTasks.map((p) => p.row);
+    if (focusTask) return arr.filter((r) => r.id !== focusTask.id);
+    return arr;
+  }, [placedTasks, focusTask]);
 
   const fireSkipWebhook = (item: PlanItem) => {
     fetch(SKIP_EVENT_WEBHOOK, {
@@ -205,13 +354,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     const item = doneItem;
     const duration = actualMinutes;
     setDoneItem(null);
-
-    // Visually mark complete immediately
-    setPendingCompleteIds((prev) => {
-      const next = new Set(prev);
-      next.add(item.id);
-      return next;
-    });
+    setPendingCompleteIds((prev) => new Set(prev).add(item.id));
 
     const timeoutId = setTimeout(async () => {
       pendingCompletions.current.delete(item.id);
@@ -223,7 +366,6 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       await updatePlanItem.mutateAsync({ id: item.id, status: "completed", actual_minutes: duration });
       if (item.task_id) {
         await completeTask.mutateAsync(item.task_id);
-        console.warn("done-delete-fix: tasks updated to completed for task_id", item.task_id);
       } else {
         const titleKey = stripTitleSuffix(item.title);
         const { data: matches } = await supabase.from("tasks").select("id,name").ilike("name", titleKey);
@@ -235,23 +377,22 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
               "id",
               matches.map((m: any) => m.id),
             );
-          console.warn("done-delete-fix: tasks updated by title fallback:", titleKey);
         }
       }
       fireSkipWebhook(item);
     }, 5000);
 
-    pendingCompletions.current.set(item.id, { timeoutId, duration });
+    pendingCompletions.current.set(item.id, timeoutId);
 
     toast(`Marked done · ${duration}m`, {
       duration: 5000,
-      style: { background: "#5C3D1E", color: "#fff", border: "none" },
+      style: { background: C.focusBg, color: "#fff", border: "none" },
       action: {
         label: "Undo",
         onClick: () => {
-          const entry = pendingCompletions.current.get(item.id);
-          if (entry) {
-            clearTimeout(entry.timeoutId);
+          const t = pendingCompletions.current.get(item.id);
+          if (t) {
+            clearTimeout(t);
             pendingCompletions.current.delete(item.id);
           }
           setPendingCompleteIds((prev) => {
@@ -264,17 +405,27 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     });
   };
 
+  const handleUndoCompleted = async (item: PlanItem) => {
+    await updatePlanItem.mutateAsync({ id: item.id, status: "pending" });
+    if (item.task_id) {
+      await supabase
+        .from("tasks")
+        .update({ status: "active", completed_at: null } as any)
+        .eq("id", item.task_id);
+    }
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+  };
+
   const handlePushTomorrow = async (item: PlanItem) => {
     await updatePlanItem.mutateAsync({ id: item.id, status: "skipped" });
+    if (item.task_id) {
+      await updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: tomorrowStr() });
+    }
     fireSkipWebhook(item);
     setPushItem(null);
-    setExpandedId(null);
   };
 
   const handleDefer = async (item: PlanItem, deferDate: string) => {
-    // Mark plan_items row as 'skipped' so Regenerate Today / morning audit
-    // doesn't treat it as an ALREADY PAST pending row. Run in parallel with
-    // the tasks PATCH; don't block on plan_items failure.
     const planItemPatch = supabase
       .from("plan_items")
       .update({ status: "skipped" } as any)
@@ -290,132 +441,33 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     setPushItem(null);
     setPickDateOpen(false);
-    setExpandedId(null);
   };
 
-  const handleActuallyDone = (item: PlanItem) => {
-    updatePlanItem.mutateAsync({ id: item.id, status: "pending" }).then(() => {
-      openDoneDialog({ ...item, status: "pending" });
-    });
-  };
-
-  const handleDurationChange = async (item: PlanItem, newMinutes: number) => {
-    const newEndMin = timeToMin(item.start_time) + newMinutes;
-    const newEndTime = minToTime(newEndMin);
-    await updateDuration.mutateAsync({ id: item.id, est_minutes: newMinutes, end_time: newEndTime });
-    if (item.calendar_event_id) {
-      fetch(UPDATE_EVENT_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          eventId: item.calendar_event_id,
-          start: pacificIso(dateString, item.start_time),
-          end: pacificIso(dateString, newEndTime),
-          title: item.title,
-          category: item.category,
-          planItemId: item.id,
-        }),
-      }).catch(() => {});
-    }
-    toast(`Duration updated · ${newMinutes}m`, { duration: 3000 });
-  };
-
-  // Locked windows for the start-time picker: static weekday rules + each
-  // external (real Google Calendar) row's window. Computed in minutes since midnight.
-  const lockedWindows = useMemo(() => {
-    const wins = getStaticLockedWindows();
-    for (const it of sortedItems) {
-      if (it.is_external) {
-        wins.push({ startMin: timeToMin(it.start_time), endMin: timeToMin(it.end_time) });
-      }
-    }
-    return wins;
-  }, [sortedItems]);
-
-  const handleTimeEdit = async (item: PlanItem, newTime24: string) => {
-    // Write pinned_time to plan_items row immediately
-    const { error: piError } = await supabase
-      .from("plan_items")
-      .update({ pinned_time: newTime24 } as any)
-      .eq("id", item.id);
-    if (piError) {
-      toast.error("Could not save pin.");
-      return;
-    }
-    // Also write to tasks row so the pin survives Regenerate
-    if (item.task_id) {
-      await supabase
-        .from("tasks")
-        .update({ pinned_time: newTime24 } as any)
-        .eq("id", item.task_id);
-    }
-    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
-    toast(`📌 Pinned to ${formatTime12h(newTime24)} — hit Regenerate to apply`, {
-      duration: 4000,
-      style: { background: "#5C3D1E", color: "#fff", border: "none" },
-    });
-  };
-
-  const handleClearPin = async (item: PlanItem) => {
-    const { error: piError } = await supabase
-      .from("plan_items")
-      .update({ pinned_time: null } as any)
-      .eq("id", item.id);
-    if (piError) {
-      toast.error("Could not clear pin.");
-      return;
-    }
-    if (item.task_id) {
-      await supabase
-        .from("tasks")
-        .update({ pinned_time: null } as any)
-        .eq("id", item.task_id);
-    }
-    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
-    toast("Pin cleared", { duration: 3000 });
-  };
-
-  // ===== Swipe-to-delete with undo =====
   const requestDelete = (item: PlanItem) => {
-    if (item.calendar_event_id) {
-      setConfirmDeleteItem(item);
-    } else {
-      performDelete(item);
-    }
+    if (item.calendar_event_id) setConfirmDeleteItem(item);
+    else performDelete(item);
   };
 
   const performDelete = async (item: PlanItem) => {
-    console.warn("done-delete-fix: performDelete called for item", item.id, item.title);
-    const snapshot = { ...item };
-
-    // Soft-delete: mark plan_items as skipped (instead of hard delete) so the AI
-    // doesn't re-plan it tomorrow.
     await supabase.from("plan_items").update({ status: "skipped" }).eq("id", item.id);
-    console.warn("done-delete-fix: plan_items updated to skipped for", item.id);
-
-    // Archive the underlying task so it stops appearing in future plans.
     let archivedTaskIds: string[] = [];
     if (item.task_id) {
       await supabase.from("tasks").update({ status: "archived" }).eq("id", item.task_id);
       archivedTaskIds = [item.task_id];
-      console.warn("done-delete-fix: tasks updated to archived for task_id", item.task_id);
     } else {
       const titleKey = stripTitleSuffix(item.title);
       const { data: matches } = await supabase.from("tasks").select("id").ilike("name", titleKey);
       if (matches && matches.length > 0) {
         archivedTaskIds = matches.map((m: any) => m.id);
         await supabase.from("tasks").update({ status: "archived" }).in("id", archivedTaskIds);
-        console.warn("done-delete-fix: tasks updated by title fallback:", titleKey);
       }
     }
-
     if (item.calendar_event_id) fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
 
-    const hadCalendar = !!item.calendar_event_id;
     toast(`Deleted: ${item.title}`, {
-      description: hadCalendar ? "Calendar event deleted" : undefined,
+      description: item.calendar_event_id ? "Calendar event deleted" : undefined,
       duration: 5000,
       action: {
         label: "Undo",
@@ -431,19 +483,13 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     });
   };
 
-  // ===== Drag-to-reorder (only on Today, only pending non-calendar non-active items can move) =====
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  // Persist a new top-to-bottom order to the DB. sort_order IS the priority truth
-  // (Master Ref 0B.1): renumber the WHOLE visible list 1,2,3… on every drop. This
-  // also cleans any stale junk values on the first drag. No "Regenerate" — the drop
-  // is the trigger; once the write lands the query re-reads and the order is true.
   const persistOrder = async (orderedIds: string[]) => {
-    // Renumber sequentially, starting at 1, in the exact dropped order.
     const updates = orderedIds.map((id, idx) =>
       supabase
         .from("plan_items")
@@ -455,39 +501,30 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     if (firstError) {
       console.warn("[drag] sort_order write failed", firstError);
       toast.error("Couldn't save the new order.");
-      // Re-read to fall back to the DB truth rather than leaving a lie on screen.
       queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
       return;
     }
-    // Re-read from DB so the list reflects the persisted sort_order, then drop the
-    // local visual override. ~half-second settle is the natural result (0B.3).
     await queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     setLocalOrder(null);
   };
 
+  const draggableIds = useMemo(() => {
+    const ids: string[] = [];
+    if (focusTask) ids.push(focusTask.id);
+    for (const r of streamTasks) ids.push(r.id);
+    for (const r of didNotFitTasks) ids.push(r.id);
+    return ids;
+  }, [focusTask, streamTasks, didNotFitTasks]);
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || viewTomorrow) return;
-
-    const activeIdx = visibleItems.findIndex((i) => i.id === active.id);
-    const overIdx = visibleItems.findIndex((i) => i.id === over.id);
+    const activeIdx = draggableIds.findIndex((id) => id === active.id);
+    const overIdx = draggableIds.findIndex((id) => id === over.id);
     if (activeIdx < 0 || overIdx < 0) return;
-
-    const draggedItem = visibleItems[activeIdx];
-    const overItem = visibleItems[overIdx];
-
-    // Externals and the active item cannot be moved
-    if (draggedItem.is_external || draggedItem.id === activeItemId) return;
-    if (overItem.is_external) {
-      toast("Calendar events are anchors — drop somewhere else");
-      return;
-    }
-
-    const reordered = arrayMove(visibleItems, activeIdx, overIdx);
-    const orderedIds = reordered.map((i) => i.id);
-    // Instant under-the-hand visual, then persist to DB (source of truth).
-    setLocalOrder(orderedIds);
-    void persistOrder(orderedIds);
+    const reordered = arrayMove(draggableIds, activeIdx, overIdx);
+    setLocalOrder(reordered);
+    void persistOrder(reordered);
   };
 
   if (isLoading) return null;
@@ -502,10 +539,16 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
       <div>
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
         <div
-          className="rounded-[14px] p-6 text-center mb-2"
-          style={{ backgroundColor: "hsl(var(--card))", border: "1.5px solid #B8906C" }}
+          style={{
+            background: C.rowBg,
+            border: `1.5px solid ${C.gold}`,
+            borderRadius: 14,
+            padding: 24,
+            textAlign: "center",
+            marginBottom: 8,
+          }}
         >
-          <p className="text-[18px] font-medium" style={{ color: "#5C3D1E" }}>
+          <p style={{ fontSize: 18, fontWeight: 500, color: C.focusBg }}>
             {isSingleDay ? "Paused" : `Paused ${fmt(pausedToday.start_date)} to ${fmt(pausedToday.end_date)}`}
           </p>
         </div>
@@ -514,29 +557,85 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     );
   }
 
-  if (viewTomorrow && !sortedItems.length) {
+  if (viewTomorrow) {
+    const tomorrowTasks = allRows.filter(
+      (r) => !(r.is_calendar_event || r.is_external) && r.status !== "completed" && r.status !== "skipped",
+    );
     return (
-      <div>
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
-        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: "0.5px solid rgba(0,0,0,0.04)" }}>
-          <p className="text-[14px] text-muted-foreground">Tomorrow's plan hasn't been generated yet.</p>
-          <p className="text-[13px] text-muted-foreground mt-1">It will arrive at 9pm tonight.</p>
-        </div>
+        {!allRows.length ? (
+          <div
+            style={{
+              background: C.rowBg,
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 14,
+              padding: 24,
+              textAlign: "center",
+            }}
+          >
+            <p style={{ fontSize: 14, color: C.neutral }}>Tomorrow's plan hasn't been generated yet.</p>
+            <p style={{ fontSize: 13, color: C.neutral, marginTop: 4 }}>It will arrive at 9pm tonight.</p>
+          </div>
+        ) : (
+          <>
+            <p
+              style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", color: C.gold, margin: "8px 0 10px 2px" }}
+            >
+              YOUR DAY
+            </p>
+            {tomorrowTasks.map((item, i) => (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  background: C.rowBg,
+                  border: `0.5px solid ${C.rowBorder}`,
+                  borderRadius: 8,
+                  padding: "10px 14px",
+                  margin: "6px 0",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 500,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: C.gold,
+                    minWidth: 38,
+                  }}
+                >
+                  {i === 0 ? "Next" : "Then"}
+                </span>
+                <span style={{ flex: 1, fontSize: 15, color: C.rowName }}>{item.title}</span>
+                <span style={{ fontSize: 14, fontWeight: 500, color: C.rowDur }}>
+                  {item.is_calendar_event ? "" : fmtDur(item.est_minutes || 0)}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
     );
   }
 
-  // Today is empty (plan row exists but no items): still render the tabs so the
-  // Tomorrow view stays reachable. Show a small empty-today message under them.
-  if (!viewTomorrow && !sortedItems.length) {
+  if (!allRows.length) {
     return (
-      <div>
+      <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
-        <div className="rounded-[14px] bg-card p-6 text-center" style={{ border: "0.5px solid rgba(0,0,0,0.04)" }}>
-          <p className="text-[14px] text-muted-foreground">No tasks scheduled for today.</p>
-          <p className="text-[13px] text-muted-foreground mt-1">
-            Tap Tomorrow to see tomorrow's plan, or Regenerate to build today.
-          </p>
+        <div
+          style={{
+            background: C.rowBg,
+            border: `0.5px solid ${C.rowBorder}`,
+            borderRadius: 14,
+            padding: 24,
+            textAlign: "center",
+          }}
+        >
+          <p style={{ fontSize: 14, color: C.neutral }}>No tasks scheduled for today.</p>
         </div>
         {addButton}
       </div>
@@ -545,137 +644,205 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
   const quickMinutes = [15, 30, 45, 60, 90];
 
-  // Tomorrow read-only (unchanged)
-  if (viewTomorrow) {
-    return (
-      <div>
-        <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
-        <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
-        <div className="space-y-0">
-          {visibleItems.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center gap-2.5 py-2 px-2 min-h-[40px]"
-              style={{ borderLeft: `3px solid #eee` }}
-            >
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: getCategoryColor(item.category) }}
-              />
-              <span className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px]">
-                {formatTime12h(item.start_time)}
-              </span>
-              <span className="flex-1 text-[14px] text-foreground truncate">{item.title}</span>
-              <span className="text-[12px] text-muted-foreground flex-shrink-0">
-                {item.is_calendar_event ? "" : `${item.est_minutes || 0}m`}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  type StreamNode =
+    | { kind: "task"; row: PlanItem; order: number; startMin: number }
+    | { kind: "wall"; wall: (typeof upcomingWalls)[number]; startMin: number };
 
-  // Today: focus card + draggable/swipeable timeline
+  const streamNodes: StreamNode[] = [];
+  streamTasks.forEach((row, idx) => {
+    const placed = placedTasks.find((p) => p.row.id === row.id);
+    streamNodes.push({ kind: "task", row, order: idx, startMin: placed ? placed.placed.startMin : 9999 });
+  });
+  upcomingWalls.forEach((w) => streamNodes.push({ kind: "wall", wall: w, startMin: w.wallStart }));
+  streamNodes.sort((a, b) => a.startMin - b.startMin);
+
   return (
-    <div>
+    <div
+      style={{
+        maxWidth: 640,
+        margin: "0 auto",
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      }}
+    >
       <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
 
-      {activeItem && (
-        <div
-          className="rounded-[14px] p-4 md:p-5 mb-4"
-          style={{
-            backgroundColor: "hsl(var(--card))",
-            border: "1.5px solid #E8A84C",
-            borderLeftWidth: "4px",
-            borderLeftColor: "#E8A84C",
-          }}
-        >
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold tracking-wider" style={{ color: "#E8A84C" }}>
-                NOW
-              </span>
-              {activeIsOverdue && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-destructive text-destructive-foreground ml-1">
-                  Overdue
-                </span>
-              )}
-            </div>
-            {activeItem.category && (
-              <span
-                className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
+          {liveWall ? (
+            <div style={{ background: C.liveWallBg, borderRadius: 20, padding: "30px 28px", marginBottom: 16 }}>
+              <div
                 style={{
-                  backgroundColor: `${getCategoryColor(activeItem.category)}15`,
-                  color: getCategoryColor(activeItem.category),
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  letterSpacing: "0.1em",
+                  color: C.liveWallSub,
+                  textTransform: "uppercase",
+                  marginBottom: 16,
                 }}
               >
-                {activeItem.category}
-              </span>
-            )}
-          </div>
-          <h2 className="text-[16px] md:text-lg font-medium text-foreground mb-0.5 break-words">{activeItem.title}</h2>
-          <p className="text-[13px] text-muted-foreground mb-4">
-            {formatTime12h(activeItem.start_time)} — {formatTime12h(activeItem.end_time)}
-            {!activeItem.is_calendar_event && ` · ${activeItem.est_minutes || 0}m`}
+                <Lock size={13} /> Happening now
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 500, color: C.liveWallTitle, marginBottom: 18, lineHeight: 1.2 }}>
+                {liveWall.title}
+              </div>
+              <div style={{ fontSize: 15, color: C.liveWallSub }}>until {formatTime12h(liveWall.end_time)}</div>
+            </div>
+          ) : focusTask ? (
+            <FocusTaskCard
+              item={focusTask}
+              onDone={() => openDoneDialog(focusTask)}
+              onPush={() => setPushItem(focusTask)}
+            />
+          ) : null}
+
+          {addButton}
+
+          <p
+            style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", color: C.gold, margin: "14px 0 10px 2px" }}
+          >
+            YOUR DAY
           </p>
-          <div className="flex gap-2 w-full">
-            <button
-              onClick={() => setPushItem(activeItem)}
-              className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border"
-              style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
-            >
-              Push
-            </button>
-            <button
-              onClick={() => openDoneDialog(activeItem)}
-              className="flex-1 px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] text-white"
-              style={{ backgroundColor: "#059669" }}
-            >
-              ✓ Done
-            </button>
-          </div>
-        </div>
-      )}
 
-      {addButton}
-
-      <p className="text-[11px] font-medium tracking-[0.1em] text-muted-foreground mb-3 mt-2">YOUR DAY</p>
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={visibleItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-0">
-            {visibleItems.map((item) => {
-              const pendingComplete = pendingCompleteIds.has(item.id);
-              const displayItem = pendingComplete ? { ...item, status: "completed" } : item;
+          {streamNodes.map((node) => {
+            if (node.kind === "wall") {
+              const w = node.wall;
               return (
-                <ScheduleRow
-                  key={item.id}
-                  item={displayItem as PlanItem}
-                  isActive={item.id === activeItemId && !pendingComplete}
-                  expanded={expandedId === item.id}
-                  onToggleExpand={() => {
-                    if (item.is_external || item.id === activeItemId) return;
-                    setExpandedId((cur) => (cur === item.id ? null : item.id));
+                <div
+                  key={`wall-${w.row.id}`}
+                  style={{
+                    background: C.upWallBg,
+                    borderRadius: "0 8px 8px 0",
+                    borderLeft: `3px solid ${C.upWallBorder}`,
+                    padding: "12px 14px",
+                    margin: "10px 0",
                   }}
-                  onDelete={() => requestDelete(item)}
-                  onPush={() => setPushItem(item)}
-                  onDone={() => openDoneDialog(item)}
-                  onActuallyDone={() => handleActuallyDone(item)}
-                  outOfSync={outOfSyncIds.has(item.id)}
-                  overlaps={overlapIds.has(item.id)}
-                  onChangeDuration={(m) => handleDurationChange(item, m)}
-                  lockedWindows={lockedWindows}
-                  onChangeStartTime={(t) => handleTimeEdit(item, t)}
-                  onClearPin={() => handleClearPin(item)}
-                />
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 15,
+                        fontWeight: 500,
+                        color: C.upWallTitle,
+                      }}
+                    >
+                      <Lock size={13} /> {w.row.title}
+                    </span>
+                    <span style={{ fontSize: 13, color: C.upWallTime }}>
+                      {minTo12h(w.wallStart)}–{minTo12h(w.wallEnd)}
+                    </span>
+                  </div>
+                  <RunwayLine needed={w.needed} runway={w.runway} fits={w.fits} />
+                </div>
               );
-            })}
-          </div>
+            }
+            const row = node.row;
+            const isFirst = node.order === 0;
+            return (
+              <TaskRow
+                key={row.id}
+                item={row}
+                label={isFirst ? "NEXT" : "THEN"}
+                onDone={() => openDoneDialog(row)}
+                onPush={() => setPushItem(row)}
+                onDelete={() => requestDelete(row)}
+              />
+            );
+          })}
+
+          {streamNodes.length === 0 && (
+            <p style={{ fontSize: 13, color: C.neutral, padding: "8px 2px" }}>Nothing else queued.</p>
+          )}
+
+          {didNotFitTasks.length > 0 && (
+            <div style={{ background: C.didntBg, borderRadius: 12, padding: "12px 14px", marginTop: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: C.didntHead,
+                  marginBottom: 8,
+                }}
+              >
+                <CornerRightUp size={15} /> Didn't fit today — rolls to tomorrow
+              </div>
+              {didNotFitTasks.map((row) => (
+                <DidntFitRow
+                  key={row.id}
+                  item={row}
+                  onDone={() => openDoneDialog(row)}
+                  onPush={() => setPushItem(row)}
+                  onDelete={() => requestDelete(row)}
+                />
+              ))}
+              <div style={{ fontSize: 12, color: C.didntHead, marginTop: 8 }}>
+                Nothing is lost. These come back in tomorrow's pool.
+              </div>
+            </div>
+          )}
         </SortableContext>
       </DndContext>
 
-      {/* Done dialog */}
+      {completedRows.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <button
+            onClick={() => setDoneStripOpen((o) => !o)}
+            style={{
+              width: "100%",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "10px 14px",
+              color: C.neutral,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <Check size={14} /> {completedRows.length} done earlier
+            </span>
+            {doneStripOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+          </button>
+          {doneStripOpen && (
+            <div style={{ marginTop: 8 }}>
+              {completedRows.map((row) => (
+                <div
+                  key={row.id}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 4px" }}
+                >
+                  <span style={{ fontSize: 13, color: C.neutral, textDecoration: "line-through" }}>{row.title}</span>
+                  <button
+                    onClick={() => handleUndoCompleted(row)}
+                    style={{
+                      fontSize: 13,
+                      color: C.neutral,
+                      background: "transparent",
+                      border: `0.5px solid ${C.rowBorder}`,
+                      borderRadius: 6,
+                      padding: "3px 10px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Undo
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <Dialog open={!!doneItem} onOpenChange={(o) => !o && setDoneItem(null)}>
         <DialogContent className="max-w-[340px] rounded-[18px]">
           <DialogHeader>
@@ -690,8 +857,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
                   onClick={() => setActualMinutes(m)}
                   className="px-3 py-1.5 rounded-lg text-[13px] font-medium border min-h-[36px]"
                   style={{
-                    borderColor: actualMinutes === m ? "#B8906C" : "hsl(var(--border))",
-                    backgroundColor: actualMinutes === m ? "#B8906C" : "transparent",
+                    borderColor: actualMinutes === m ? C.gold : "hsl(var(--border))",
+                    backgroundColor: actualMinutes === m ? C.gold : "transparent",
                     color: actualMinutes === m ? "#fff" : "hsl(var(--foreground))",
                   }}
                 >
@@ -715,7 +882,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
               onClick={handleSaveDone}
               disabled={updatePlanItem.isPending}
               className="w-full rounded-xl"
-              style={{ backgroundColor: "#059669" }}
+              style={{ backgroundColor: C.focusBg }}
             >
               Save
             </Button>
@@ -723,7 +890,6 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         </DialogContent>
       </Dialog>
 
-      {/* Push picker */}
       <Dialog
         open={!!pushItem}
         onOpenChange={(o) => {
@@ -763,10 +929,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
               </button>
               <button
                 onClick={() => setPickDateOpen(true)}
-                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left flex items-center gap-2"
+                className="w-full px-4 py-2.5 rounded-xl text-[14px] font-medium min-h-[44px] border text-left"
                 style={{ borderColor: "hsl(var(--border))" }}
               >
-                <CalendarDays size={16} className="text-muted-foreground" />
                 Pick a Date
               </button>
               <button
@@ -799,7 +964,6 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
         </DialogContent>
       </Dialog>
 
-      {/* Confirm delete (calendar-synced rows) */}
       <AlertDialog open={!!confirmDeleteItem} onOpenChange={(o) => !o && setConfirmDeleteItem(null)}>
         <AlertDialogContent className="max-w-[340px] rounded-[18px]">
           <AlertDialogHeader>
@@ -809,7 +973,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl" style={{ borderColor: "#B8906C", color: "#5C3D1E" }}>
+            <AlertDialogCancel className="rounded-xl" style={{ borderColor: C.gold, color: C.focusBg }}>
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
@@ -830,410 +994,341 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
   );
 }
 
-// ============= ScheduleRow with swipe-to-delete and drag handle =============
-
-interface RowProps {
-  item: PlanItem;
-  isActive: boolean;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  onDelete: () => void;
-  onPush: () => void;
-  onDone: () => void;
-  onActuallyDone: () => void;
-  outOfSync: boolean;
-  overlaps: boolean;
-  onChangeDuration: (m: number) => void;
-  lockedWindows: { startMin: number; endMin: number }[];
-  onChangeStartTime: (newTime24: string) => void;
-  onClearPin: () => void;
+function FocusTaskCard({ item, onDone, onPush }: { item: PlanItem; onDone: () => void; onPush: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 20 : ("auto" as any),
+    boxShadow: isDragging ? "0 8px 20px rgba(0,0,0,0.18)" : undefined,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ ...style, background: C.focusBg, borderRadius: 20, padding: "30px 28px", marginBottom: 16 }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <button
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reprioritize"
+          className="touch-none cursor-grab active:cursor-grabbing"
+          style={{ background: "transparent", border: "none", color: C.focusGrip, marginTop: 4, flexShrink: 0 }}
+        >
+          <GripVertical size={22} />
+        </button>
+        <div style={{ flex: 1 }}>
+          <div
+            style={{
+              fontSize: 33,
+              fontWeight: 500,
+              lineHeight: 1.25,
+              color: C.focusName,
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span>{item.title}</span>
+            {item.pinned_time && <Pin size={22} style={{ color: C.gold, flexShrink: 0 }} />}
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 16,
+                fontWeight: 500,
+                color: C.focusDur,
+              }}
+            >
+              <Clock size={17} /> {fmtDur(item.est_minutes || 0)}
+            </span>
+            <button
+              onClick={onDone}
+              style={{ background: "transparent", border: "none", fontSize: 14, color: C.focusDone, cursor: "pointer" }}
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-const SWIPE_REVEAL = 80;
-const SWIPE_THRESHOLD = 40;
-
-function ScheduleRow({
+function TaskRow({
   item,
-  isActive,
-  expanded,
-  onToggleExpand,
-  onDelete,
-  onPush,
+  label,
   onDone,
-  onActuallyDone,
-  outOfSync,
-  overlaps,
-  onChangeDuration,
-  lockedWindows,
-  onChangeStartTime,
-  onClearPin,
-}: RowProps) {
-  const isCompleted = item.status === "completed";
-  const isSkipped = item.status === "skipped";
-  const isPending = !isCompleted && !isSkipped;
-  const isExternal = item.is_external === true;
-  const isLocalOnly = item.local_only === true;
-
-  // Quick-add (local_only) rows stay fully interactive even when they happen to be
-  // the next upcoming item — they are user-added, not part of the AI-locked plan.
-  const lockedActive = isActive && !isLocalOnly;
-  const canSwipe = !isExternal && !lockedActive;
-  const canDrag = !isExternal && !lockedActive && isPending;
-
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: item.id,
-    disabled: !canDrag,
-  });
-
-  // Swipe state
-  const [translateX, setTranslateX] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const startX = useRef<number | null>(null);
-  const startY = useRef<number | null>(null);
-  const swiping = useRef(false);
-  const suppressNextClick = useRef(false);
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (!canSwipe) return;
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-    swiping.current = false;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (!canSwipe || startX.current === null || startY.current === null) return;
-    const dx = e.touches[0].clientX - startX.current;
-    const dy = e.touches[0].clientY - startY.current;
-    if (!swiping.current) {
-      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-        swiping.current = true;
-        // Mutual exclusion: collapse any expanded panel before starting a swipe.
-        if (expanded) onToggleExpand();
-      } else if (Math.abs(dy) > 10) {
-        return;
-      } else {
-        return;
-      }
-    }
-    const base = revealed ? -SWIPE_REVEAL : 0;
-    let next = base + dx;
-    if (next > 0) next = 0;
-    // Clamp swipe travel to exactly the reveal width — never wider than the Delete button.
-    if (next < -SWIPE_REVEAL) next = -SWIPE_REVEAL;
-    setTranslateX(next);
-  };
-  const onTouchEnd = () => {
-    if (!canSwipe) {
-      startX.current = null;
-      startY.current = null;
-      return;
-    }
-    const wasSwiping = swiping.current;
-    if (wasSwiping) {
-      // End of an actual swipe gesture — snap to revealed or collapsed.
-      if (translateX < -SWIPE_THRESHOLD) {
-        setTranslateX(-SWIPE_REVEAL);
-        setRevealed(true);
-      } else {
-        setTranslateX(0);
-        setRevealed(false);
-      }
-    } else if (revealed) {
-      // It was a tap (no swipe motion) on a row that already had its swipe revealed.
-      // Treat as: collapse the swipe AND toggle expand in one tap.
-      // We handle it here because the synthesized click after touchend can be flaky
-      // when the underlying element has been transformed.
-      // eslint-disable-next-line no-console
-      setTranslateX(0);
-      setRevealed(false);
-      onToggleExpand();
-      // Suppress the synthesized click that follows touchend so we don't double-toggle.
-      suppressNextClick.current = true;
-    }
-    startX.current = null;
-    startY.current = null;
-    swiping.current = false;
-  };
-
-  const handleRowClick = () => {
-    if (suppressNextClick.current) {
-      suppressNextClick.current = false;
-      return;
-    }
-    // For mouse/desktop clicks (no touch), this is the primary path.
-    if (revealed) {
-      setTranslateX(0);
-      setRevealed(false);
-      onToggleExpand();
-      return;
-    }
-    onToggleExpand();
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete();
-  };
-
-  // Reset swipe when dragging starts
-  useEffect(() => {
-    if (isDragging && revealed) {
-      setTranslateX(0);
-      setRevealed(false);
-    }
-  }, [isDragging, revealed]);
-
-  // Mutual exclusion the other direction: if the row gets expanded while swiped open,
-  // collapse the swipe state so only one interaction surface is visible.
-  useEffect(() => {
-    if (expanded && revealed) {
-      setTranslateX(0);
-      setRevealed(false);
-    }
-  }, [expanded, revealed]);
-
-  // If the row's status changes (completion timer fires, push fires, etc.), clear any
-  // active swipe state so we don't leave a Delete pad showing on a row that's about
-  // to vanish from the timeline.
-  useEffect(() => {
-    if (revealed && (isCompleted || isSkipped || item.status === "deferred")) {
-      setTranslateX(0);
-      setRevealed(false);
-    }
-  }, [item.status, isCompleted, isSkipped, revealed]);
-
-  // Outside-tap dismiss: tapping anywhere outside this row resets its swipe state.
-  const rowRef = useRef<HTMLDivElement | null>(null);
-  const setRefs = (el: HTMLDivElement | null) => {
-    setNodeRef(el);
-    rowRef.current = el;
-  };
-  useEffect(() => {
-    if (!revealed) return;
-    const onDocPointerDown = (e: PointerEvent) => {
-      const target = e.target as Node | null;
-      const inside = !!rowRef.current && !!target && rowRef.current.contains(target);
-      if (!inside) {
-        setTranslateX(0);
-        setRevealed(false);
-      }
-    };
-    // Use capture so we run before any handler that might stopPropagation.
-    document.addEventListener("pointerdown", onDocPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onDocPointerDown, true);
-  }, [revealed, item.id]);
-
-  let borderColor = "#eee";
-  if (isActive) borderColor = "#E8A84C";
-  else if (isCompleted || isSkipped) borderColor = "#ddd";
-
-  const dragStyle = {
+  onPush,
+  onDelete,
+}: {
+  item: PlanItem;
+  label: string;
+  onDone: () => void;
+  onPush: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const [open, setOpen] = useState(false);
+  const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 20 : ("auto" as any),
     boxShadow: isDragging ? "0 8px 20px rgba(0,0,0,0.12)" : undefined,
-    backgroundColor: isDragging ? "#FFF8F0" : undefined,
+    background: isDragging ? "#FFF8F0" : C.rowBg,
   };
-
   return (
-    <div ref={setRefs} style={dragStyle} className="relative rounded-md" data-row-id={item.id}>
-      <div className="relative overflow-hidden rounded-md">
-        {/* Red delete pad — under the row (only as tall as the row, never the expanded panel) */}
-        {canSwipe && (
-          <button
-            onClick={handleDeleteClick}
-            className="absolute top-0 right-0 bottom-0 flex items-center justify-center text-white"
-            style={{ width: SWIPE_REVEAL, backgroundColor: "#C44" }}
-            aria-label="Delete task"
-            tabIndex={revealed ? 0 : -1}
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
-
-        <div
-          className={`flex items-center gap-1 py-2 px-2 min-h-[40px] bg-card relative`}
-          style={{
-            borderLeft: `3px solid ${borderColor}`,
-            opacity: isCompleted || isSkipped ? 0.5 : 1,
-            transform: `translateX(${translateX}px)`,
-            transition: startX.current !== null ? "none" : "transform 0.18s ease-out",
-            ...(isExternal ? { backgroundColor: "#EEF4FF", borderRadius: "8px", borderLeft: `3px solid #93C5FD` } : {}),
-          }}
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          onClick={handleRowClick}
+    <div ref={setNodeRef} style={{ ...style }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          background: "transparent",
+          border: `0.5px solid ${C.rowBorder}`,
+          borderRadius: 8,
+          padding: "10px 14px",
+          margin: "6px 0",
+        }}
+      >
+        <button
+          {...attributes}
+          {...listeners}
+          aria-label="Drag to reprioritize"
+          className="touch-none cursor-grab active:cursor-grabbing"
+          style={{ background: "transparent", border: "none", color: C.rowGrip, flexShrink: 0 }}
         >
-          {/* Drag handle */}
-          {canDrag ? (
-            <button
-              {...attributes}
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-              className="touch-none -ml-1 p-1 rounded flex-shrink-0 cursor-grab active:cursor-grabbing"
-              style={{ color: "rgba(139, 115, 85, 0.6)" }}
-              aria-label="Drag to reorder"
-            >
-              <GripVertical size={14} />
-            </button>
-          ) : (
-            <div className="w-[22px] flex-shrink-0" />
-          )}
-
-          {isExternal ? (
-            <Calendar size={12} className="flex-shrink-0" style={{ color: "#3B82F6" }} />
-          ) : isCompleted ? (
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#059669" }} />
-          ) : isSkipped ? (
-            <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: "#aaa" }} />
-          ) : (
-            <div
-              className="w-2 h-2 rounded-full flex-shrink-0"
-              style={{ backgroundColor: getCategoryColor(item.category) }}
-            />
-          )}
-
-          <StartTimePicker
-            rowId={item.id}
-            value={item.start_time}
-            lockedWindows={lockedWindows}
-            disabled={isExternal || lockedActive || !isPending}
-            onPick={(t) => onChangeStartTime(t)}
-            className="text-[12px] text-muted-foreground flex-shrink-0 w-[60px] ml-1 text-left"
-            style={isExternal ? { color: "#3B82F6" } : undefined}
-          />
-
-          <span
-            className={`flex-1 text-[14px] truncate ${isActive ? "font-bold" : ""} ${isSkipped ? "line-through" : ""}`}
-            style={{ color: isExternal ? "#3B82F6" : "hsl(var(--foreground))" }}
-          >
-            {item.title}
-          </span>
-
-          {item.pinned_time && !isExternal && (
-            <span title={`Pinned to ${formatTime12h(item.pinned_time)}`}>
-              <Pin size={12} className="flex-shrink-0" style={{ color: "#B8906C" }} />
-            </span>
-          )}
-
-          {outOfSync && (
-            <span title="Calendar event out of sync — will re-sync at next 9pm planner run">
-              <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#E8A84C" }} />
-            </span>
-          )}
-
-          {overlaps && (
-            <span title="Overlaps with the task above">
-              <AlertCircle size={13} className="flex-shrink-0" style={{ color: "#C44" }} />
-            </span>
-          )}
-
-          {isCompleted && <Check size={13} style={{ color: "#059669" }} className="flex-shrink-0" />}
-
-          {!isExternal && (
-            <DurationPicker
-              value={item.est_minutes || 0}
-              disabled={isExternal || isCompleted || isSkipped || item.status === "deferred"}
-              onChange={onChangeDuration}
-            />
-          )}
-        </div>
+          <GripVertical size={16} />
+        </button>
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: C.gold,
+            minWidth: 38,
+          }}
+        >
+          {label}
+        </span>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          style={{
+            flex: 1,
+            textAlign: "left",
+            background: "transparent",
+            border: "none",
+            fontSize: 15,
+            color: C.rowName,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span style={{ flex: 1 }}>{item.title}</span>
+          {item.pinned_time && <Pin size={13} style={{ color: C.gold, flexShrink: 0 }} />}
+        </button>
+        <span style={{ fontSize: 14, fontWeight: 500, color: C.rowDur }}>{fmtDur(item.est_minutes || 0)}</span>
       </div>
-
-      {expanded && (
-        <div className="ml-3 mb-2 p-3 rounded-lg" style={{ backgroundColor: "#FFF8F0", border: "1px solid #E8D5B8" }}>
-          <p className="text-[14px] font-medium text-foreground mb-0.5">{item.title}</p>
-          <p className="text-[12px] text-muted-foreground mb-2">
-            {formatTime12h(item.start_time)} — {formatTime12h(item.end_time)}
-            {!isExternal && ` · ${item.est_minutes || 0}m`}
-            {item.category && ` · ${item.category}`}
-          </p>
-          {isPending && (
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={onPush}
-                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]"
-                style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted-foreground))" }}
-              >
-                Push
-              </button>
-              <button
-                onClick={onDone}
-                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]"
-                style={{ backgroundColor: "#059669" }}
-              >
-                ✓ Done
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                className="flex-1 px-3 py-2 rounded-lg text-[13px] font-medium text-white min-h-[36px]"
-                style={{ backgroundColor: "#C44" }}
-                aria-label="Delete task"
-              >
-                Delete
-              </button>
-              {item.pinned_time && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClearPin();
-                  }}
-                  className="w-full px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px] flex items-center justify-center gap-1.5"
-                  style={{ borderColor: "#B8906C", color: "#5C3D1E" }}
-                >
-                  <Pin size={12} /> Clear pin ({formatTime12h(item.pinned_time)})
-                </button>
-              )}
-            </div>
-          )}
-          {isSkipped && (
-            <button
-              onClick={onActuallyDone}
-              className="px-3 py-2 rounded-lg text-[13px] font-medium border min-h-[36px]"
-              style={{ borderColor: "#059669", color: "#059669" }}
-            >
-              Actually Done
-            </button>
-          )}
-          {isCompleted && (
-            <p className="text-[13px] font-medium" style={{ color: "#059669" }}>
-              ✓ Completed
-            </p>
-          )}
+      {open && (
+        <div style={{ display: "flex", gap: 8, margin: "0 0 8px 38px", flexWrap: "wrap" }}>
+          <button
+            onClick={onDone}
+            style={{
+              fontSize: 13,
+              color: C.fits,
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "6px 14px",
+              cursor: "pointer",
+            }}
+          >
+            <Check size={13} style={{ verticalAlign: -2 }} /> Done
+          </button>
+          <button
+            onClick={onPush}
+            style={{
+              fontSize: 13,
+              color: C.neutral,
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "6px 14px",
+              cursor: "pointer",
+            }}
+          >
+            Push
+          </button>
+          <button
+            onClick={onDelete}
+            style={{
+              fontSize: 13,
+              color: "#C44",
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "6px 14px",
+              cursor: "pointer",
+            }}
+          >
+            <Trash2 size={13} style={{ verticalAlign: -2 }} /> Delete
+          </button>
         </div>
       )}
     </div>
   );
 }
 
+function DidntFitRow({
+  item,
+  onDone,
+  onPush,
+  onDelete,
+}: {
+  item: PlanItem;
+  onDone: () => void;
+  onPush: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const [open, setOpen] = useState(false);
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 20 : ("auto" as any) };
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 0" }}>
+        <button
+          {...attributes}
+          {...listeners}
+          aria-label="Drag back into the day"
+          className="touch-none cursor-grab active:cursor-grabbing"
+          style={{ background: "transparent", border: "none", color: C.didntHead, flexShrink: 0 }}
+        >
+          <GripVertical size={14} />
+        </button>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          style={{
+            flex: 1,
+            textAlign: "left",
+            background: "transparent",
+            border: "none",
+            fontSize: 14,
+            color: C.didntItem,
+            cursor: "pointer",
+          }}
+        >
+          {item.title}
+        </button>
+        <span style={{ fontSize: 14, color: C.didntItem }}>{fmtDur(item.est_minutes || 0)}</span>
+      </div>
+      {open && (
+        <div style={{ display: "flex", gap: 8, margin: "0 0 6px 24px", flexWrap: "wrap" }}>
+          <button
+            onClick={onDone}
+            style={{
+              fontSize: 13,
+              color: C.fits,
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "5px 12px",
+              cursor: "pointer",
+            }}
+          >
+            Done
+          </button>
+          <button
+            onClick={onPush}
+            style={{
+              fontSize: 13,
+              color: C.neutral,
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "5px 12px",
+              cursor: "pointer",
+            }}
+          >
+            Push out
+          </button>
+          <button
+            onClick={onDelete}
+            style={{
+              fontSize: 13,
+              color: "#C44",
+              background: "transparent",
+              border: `0.5px solid ${C.rowBorder}`,
+              borderRadius: 8,
+              padding: "5px 12px",
+              cursor: "pointer",
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RunwayLine({ needed, runway, fits }: { needed: number; runway: number; fits: boolean }) {
+  if (needed === 0) {
+    return <div style={{ fontSize: 12, marginTop: 4, color: C.upWallTime }}>nothing scheduled before this</div>;
+  }
+  if (fits) {
+    return (
+      <div style={{ fontSize: 12, marginTop: 4, color: C.fits, display: "flex", alignItems: "center", gap: 5 }}>
+        <Check size={13} /> all fit · {fmtDur(runway - needed)} to spare
+      </div>
+    );
+  }
+  return (
+    <div style={{ fontSize: 12, marginTop: 4, color: C.wontFit, display: "flex", alignItems: "center", gap: 5 }}>
+      <AlertTriangle size={13} /> won't fit — push something ({fmtDur(needed - runway)} over)
+    </div>
+  );
+}
+
 function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onToggle: () => void }) {
   return (
-    <div className="mb-4">
-      <div className="flex gap-1.5">
-        <button
-          onClick={viewTomorrow ? onToggle : undefined}
-          className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
-          style={{
-            backgroundColor: !viewTomorrow ? "#B8906C" : "#E8DDD0",
-            color: !viewTomorrow ? "#fff" : "#3D3225",
-          }}
-        >
-          Today
-        </button>
-        <button
-          onClick={!viewTomorrow ? onToggle : undefined}
-          className="text-[13px] font-semibold rounded-full px-4 py-1.5 transition-colors"
-          style={{
-            backgroundColor: viewTomorrow ? "#B8906C" : "#E8DDD0",
-            color: viewTomorrow ? "#fff" : "#3D3225",
-          }}
-        >
-          Tomorrow
-        </button>
-      </div>
+    <div style={{ marginBottom: 16, display: "flex", gap: 6 }}>
+      <button
+        onClick={viewTomorrow ? onToggle : undefined}
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          borderRadius: 999,
+          padding: "6px 16px",
+          border: "none",
+          cursor: "pointer",
+          background: !viewTomorrow ? C.gold : "#E8DDD0",
+          color: !viewTomorrow ? "#fff" : "#3D3225",
+        }}
+      >
+        Today
+      </button>
+      <button
+        onClick={!viewTomorrow ? onToggle : undefined}
+        style={{
+          fontSize: 13,
+          fontWeight: 600,
+          borderRadius: 999,
+          padding: "6px 16px",
+          border: "none",
+          cursor: "pointer",
+          background: viewTomorrow ? C.gold : "#E8DDD0",
+          color: viewTomorrow ? "#fff" : "#3D3225",
+        }}
+      >
+        Tomorrow
+      </button>
     </div>
   );
 }
