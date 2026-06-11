@@ -6,16 +6,14 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveTasks, type Task } from "@/hooks/useTasks";
-import { useTodayPlan, useTodayPlanItems, todayStr } from "@/hooks/useDailyPlan";
+import { useTodayPlan, useTodayPlanItems } from "@/hooks/useDailyPlan";
 import { getCategoryColor } from "@/lib/constants";
-import { findNextSlot, pacificIso } from "@/lib/planScheduling";
+import { findNextSlot } from "@/lib/planScheduling";
 
 interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }
-
-const CREATE_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-create-event";
 
 const QUADRANT_ORDER: Record<string, number> = {
   "Do Now": 0,
@@ -99,21 +97,6 @@ export function AddToTodayModal({ open, onOpenChange }: Props) {
       if (error || !inserted) throw error ?? new Error("Insert failed");
 
       qc.invalidateQueries({ queryKey: ["daily-plan"] });
-
-      const dateStr = todayStr();
-      fetch(CREATE_EVENT_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: params.title,
-          start: pacificIso(dateStr, slot.start),
-          end: pacificIso(dateStr, slot.end),
-          category: params.category,
-          planItemId: inserted.id,
-        }),
-      })
-        .then(() => qc.invalidateQueries({ queryKey: ["daily-plan"] }))
-        .catch(() => {});
 
       toast.success(`Added: ${params.title}`);
       reset();
