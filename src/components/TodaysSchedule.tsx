@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
@@ -45,7 +46,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { usePlanItemsByDate, useUpdatePlanItem, todayStr, tomorrowStr, type PlanItem } from "@/hooks/useDailyPlan";
+import {
+  usePlanItemsByDate,
+  useUpdatePlanItem,
+  useUpdatePlanItemDuration,
+  todayStr,
+  tomorrowStr,
+  type PlanItem,
+} from "@/hooks/useDailyPlan";
 import { useCompleteTask, useUpdateTask } from "@/hooks/useTasks";
 import { formatTime12h } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,6 +89,8 @@ const C = {
   neutral: "#6B6256",
   rowGrip: "#C9B79F",
 };
+
+const DURATION_PRESETS = [15, 30, 45, 60, 90];
 
 type Wall = { startMin: number; endMin: number; label: string };
 type EngineTask = { id: string; name: string; durationMin: number; priority: number; pinnedStartMin?: number };
@@ -150,6 +160,12 @@ function timeToMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + (m || 0);
 }
+function minToTimeStr(min: number): string {
+  const clamped = ((min % 1440) + 1440) % 1440;
+  const h = Math.floor(clamped / 60);
+  const m = clamped % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+}
 function pacificNowMin(): number {
   const pac = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
   return pac.getHours() * 60 + pac.getMinutes();
@@ -209,6 +225,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
+  const updatePlanItemDuration = useUpdatePlanItemDuration();
   const completeTask = useCompleteTask();
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
@@ -342,6 +359,21 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan_item_id: item.id, calendar_event_id: item.calendar_event_id }),
     }).catch(() => {});
+  };
+
+  const handleDurationChange = async (item: PlanItem, minutes: number) => {
+    if (!minutes || minutes <= 0 || minutes === item.est_minutes) return;
+    const startMin = timeToMin(item.start_time);
+    const newEnd = minToTimeStr(startMin + minutes);
+    try {
+      await updatePlanItemDuration.mutateAsync({ id: item.id, est_minutes: minutes, end_time: newEnd });
+      toast(`Duration set · ${fmtDur(minutes)}`, {
+        duration: 2500,
+        style: { background: C.focusBg, color: "#fff", border: "none" },
+      });
+    } catch {
+      toast.error("Couldn't save the new duration.");
+    }
   };
 
   const openDoneDialog = (item: PlanItem) => {
@@ -748,6 +780,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
               item={focusTask}
               onDone={() => openDoneDialog(focusTask)}
               onPush={() => setPushItem(focusTask)}
+              onDurationChange={(m) => handleDurationChange(focusTask, m)}
+              durationSaving={updatePlanItemDuration.isPending}
             />
           ) : null}
 
@@ -804,6 +838,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
                 onDone={() => openDoneDialog(row)}
                 onPush={() => setPushItem(row)}
                 onDelete={() => requestDelete(row)}
+                onDurationChange={(m) => handleDurationChange(row, m)}
+                durationSaving={updatePlanItemDuration.isPending}
               />
             );
           })}
@@ -834,6 +870,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
                   onDone={() => openDoneDialog(row)}
                   onPush={() => setPushItem(row)}
                   onDelete={() => requestDelete(row)}
+                  onDurationChange={(m) => handleDurationChange(row, m)}
+                  durationSaving={updatePlanItemDuration.isPending}
                 />
               ))}
               <div style={{ fontSize: 12, color: C.didntHead, marginTop: 8 }}>
@@ -1047,7 +1085,125 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   );
 }
 
-function FocusTaskCard({ item, onDone, onPush }: { item: PlanItem; onDone: () => void; onPush: () => void }) {
+function DurationEditor({
+  minutes,
+  onChange,
+  saving,
+  triggerStyle,
+}: {
+  minutes: number;
+  onChange: (m: number) => void;
+  saving?: boolean;
+  triggerStyle: React.CSSProperties;
+}) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState("");
+
+  const pick = (m: number) => {
+    setOpen(false);
+    setCustom("");
+    onChange(m);
+  };
+
+  const applyCustom = () => {
+    const n = Number(custom);
+    if (!n || n <= 0) return;
+    setOpen(false);
+    setCustom("");
+    onChange(n);
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Edit duration"
+          style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0, ...triggerStyle }}
+        >
+          {fmtDur(minutes || 0)}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-auto p-3 rounded-[14px]"
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: C.rowBg, border: `1px solid ${C.rowBorder}` }}
+      >
+        <p style={{ fontSize: 12, color: C.neutral, marginBottom: 8 }}>How long will this take?</p>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {DURATION_PRESETS.map((m) => (
+            <button
+              key={m}
+              onClick={() => pick(m)}
+              disabled={saving}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 500,
+                minHeight: 36,
+                cursor: "pointer",
+                border: `1px solid ${minutes === m ? C.gold : C.rowBorder}`,
+                background: minutes === m ? C.gold : "transparent",
+                color: minutes === m ? "#fff" : C.rowName,
+              }}
+            >
+              {m}m
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Input
+            type="number"
+            min={1}
+            inputMode="numeric"
+            placeholder="Custom"
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") applyCustom();
+            }}
+            className="w-20 text-center h-9"
+          />
+          <span style={{ fontSize: 13, color: C.neutral }}>min</span>
+          <button
+            onClick={applyCustom}
+            disabled={saving || !custom}
+            style={{
+              marginLeft: "auto",
+              padding: "6px 14px",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 500,
+              minHeight: 36,
+              cursor: custom ? "pointer" : "default",
+              border: "none",
+              background: custom ? C.focusBg : "#D9CCBA",
+              color: "#fff",
+            }}
+          >
+            Set
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function FocusTaskCard({
+  item,
+  onDone,
+  onPush,
+  onDurationChange,
+  durationSaving,
+}: {
+  item: PlanItem;
+  onDone: () => void;
+  onPush: () => void;
+  onDurationChange: (m: number) => void;
+  durationSaving?: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -1097,7 +1253,20 @@ function FocusTaskCard({ item, onDone, onPush }: { item: PlanItem; onDone: () =>
                 color: C.focusDur,
               }}
             >
-              <Clock size={17} /> {fmtDur(item.est_minutes || 0)}
+              <Clock size={17} />
+              <DurationEditor
+                minutes={item.est_minutes || 0}
+                onChange={onDurationChange}
+                saving={durationSaving}
+                triggerStyle={{
+                  fontSize: 16,
+                  fontWeight: 500,
+                  color: C.focusDur,
+                  textDecoration: "underline",
+                  textDecorationColor: "rgba(235,201,156,0.4)",
+                  textUnderlineOffset: 3,
+                }}
+              />
             </span>
             <button
               onClick={onDone}
@@ -1118,12 +1287,16 @@ function TaskRow({
   onDone,
   onPush,
   onDelete,
+  onDurationChange,
+  durationSaving,
 }: {
   item: PlanItem;
   label: string;
   onDone: () => void;
   onPush: () => void;
   onDelete: () => void;
+  onDurationChange: (m: number) => void;
+  durationSaving?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const [open, setOpen] = useState(false);
@@ -1187,7 +1360,19 @@ function TaskRow({
           <span style={{ flex: 1 }}>{item.title}</span>
           {item.pinned_time && <Pin size={13} style={{ color: C.gold, flexShrink: 0 }} />}
         </button>
-        <span style={{ fontSize: 14, fontWeight: 500, color: C.rowDur }}>{fmtDur(item.est_minutes || 0)}</span>
+        <DurationEditor
+          minutes={item.est_minutes || 0}
+          onChange={onDurationChange}
+          saving={durationSaving}
+          triggerStyle={{
+            fontSize: 14,
+            fontWeight: 500,
+            color: C.rowDur,
+            textDecoration: "underline",
+            textDecorationColor: "rgba(154,107,63,0.35)",
+            textUnderlineOffset: 3,
+          }}
+        />
       </div>
       {open && (
         <div style={{ display: "flex", gap: 8, margin: "0 0 8px 38px", flexWrap: "wrap" }}>
@@ -1244,11 +1429,15 @@ function DidntFitRow({
   onDone,
   onPush,
   onDelete,
+  onDurationChange,
+  durationSaving,
 }: {
   item: PlanItem;
   onDone: () => void;
   onPush: () => void;
   onDelete: () => void;
+  onDurationChange: (m: number) => void;
+  durationSaving?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
   const [open, setOpen] = useState(false);
@@ -1279,7 +1468,18 @@ function DidntFitRow({
         >
           {item.title}
         </button>
-        <span style={{ fontSize: 14, color: C.didntItem }}>{fmtDur(item.est_minutes || 0)}</span>
+        <DurationEditor
+          minutes={item.est_minutes || 0}
+          onChange={onDurationChange}
+          saving={durationSaving}
+          triggerStyle={{
+            fontSize: 14,
+            color: C.didntItem,
+            textDecoration: "underline",
+            textDecorationColor: "rgba(99,56,6,0.3)",
+            textUnderlineOffset: 3,
+          }}
+        />
       </div>
       {open && (
         <div style={{ display: "flex", gap: 8, margin: "0 0 6px 24px", flexWrap: "wrap" }}>
