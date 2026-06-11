@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Inbox, ChevronRight, ChevronDown, RefreshCw, Plus, Pause, Play, CalendarRange } from "lucide-react";
+import { Inbox, ChevronRight, ChevronDown, Plus, Pause, Play, CalendarRange } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrainDumpModal } from "@/components/BrainDumpModal";
 import { AddNoteModal } from "@/components/AddNoteModal";
@@ -8,14 +8,12 @@ import { DayStripCard } from "@/components/DayStripCard";
 
 import { TodaysSchedule } from "@/components/TodaysSchedule";
 import { AddToTodayModal } from "@/components/AddToTodayModal";
-import { RegenerateTodayDialog } from "@/components/RegenerateTodayDialog";
 import { PushedTodaySection } from "@/components/PushedTodaySection";
 import { PauseDatesDialog } from "@/components/PauseDatesDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTodayPlan, useTodayPlanItems, todayStr, tomorrowStr } from "@/hooks/useDailyPlan";
@@ -33,7 +31,6 @@ export default function Dashboard() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [viewTomorrow, setViewTomorrow] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
-  const [regenMode, setRegenMode] = useState<"new-tasks" | "keep-tasks" | null>(null);
   const [pauseDatesOpen, setPauseDatesOpen] = useState(false);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
@@ -102,15 +99,6 @@ export default function Dashboard() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="rounded-xl">
-            <DropdownMenuItem onClick={() => setRegenMode("new-tasks")} className="text-[13px] cursor-pointer">
-              <RefreshCw size={14} className="mr-2" />
-              Regenerate + add new tasks
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setRegenMode("keep-tasks")} className="text-[13px] cursor-pointer">
-              <RefreshCw size={14} className="mr-2" />
-              Regenerate, keep current tasks
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handlePauseToday} className="text-[13px] cursor-pointer">
               <Pause size={14} className="mr-2" />
               Pause today
@@ -225,11 +213,6 @@ export default function Dashboard() {
       <BrainDumpModal open={brainDumpOpen} onOpenChange={setBrainDumpOpen} />
       <AddNoteModal open={noteOpen} onOpenChange={setNoteOpen} />
       <AddToTodayModal open={addOpen} onOpenChange={setAddOpen} />
-      <RegenerateTodayDialog
-        open={regenMode !== null}
-        onOpenChange={(o) => !o && setRegenMode(null)}
-        keepTasksOnly={regenMode === "keep-tasks"}
-      />
       <PauseDatesDialog open={pauseDatesOpen} onOpenChange={setPauseDatesOpen} onSaved={invalidatePauses} />
     </div>
   );
