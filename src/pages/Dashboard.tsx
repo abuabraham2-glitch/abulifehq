@@ -5,7 +5,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BrainDumpModal } from "@/components/BrainDumpModal";
 import { AddNoteModal } from "@/components/AddNoteModal";
 import { DayStripCard } from "@/components/DayStripCard";
-import { CalendarBanner } from "@/components/CalendarBanner";
 
 import { TodaysSchedule } from "@/components/TodaysSchedule";
 import { AddToTodayModal } from "@/components/AddToTodayModal";
@@ -197,9 +196,6 @@ export default function Dashboard() {
         <>
           {/* Day Strip */}
           <DayStripCard viewTomorrow={viewTomorrow} />
-
-          {/* Calendar events banner — always today */}
-          {!todayPause && <CalendarBanner />}
 
           {/* Toggle + Focus + Timeline (or Paused card when today is paused) */}
           <TodaysSchedule
