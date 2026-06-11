@@ -1546,7 +1546,7 @@ function RunwayLine({ needed, runway, fits }: { needed: number; runway: number; 
 
 function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onToggle: () => void }) {
   return (
-    <div style={{ marginTop: 12, marginBottom: 16, display: "flex", gap: 6 }}>
+    <div className="mt-4 md:mt-3" style={{ marginBottom: 16, display: "flex", gap: 6 }}>
       <button
         onClick={viewTomorrow ? onToggle : undefined}
         style={{
