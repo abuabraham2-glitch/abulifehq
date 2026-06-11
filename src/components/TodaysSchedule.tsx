@@ -130,7 +130,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
 
   // Out-of-sync rows after drag-reorder (calendar events whose times moved but Cal API not yet synced)
   const [outOfSyncIds, setOutOfSyncIds] = useState<Set<string>>(new Set());
-  // Local visual order from drag — memory only, resets on refresh
+  // Local visual order from drag — instant under-the-hand feedback. The DB write
+  // (sort_order) is the source of truth; this clears once the query re-reads.
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
   const nowTime = useMemo(() => {
@@ -138,8 +139,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     return `${String(pac.getHours()).padStart(2, "0")}:${String(pac.getMinutes()).padStart(2, "0")}:00`;
   }, []);
 
+  // Items load already ordered by sort_order (useDailyPlan .order('sort_order')).
+  // sort_order IS the priority truth (Master Ref 0B.1). Preserve that load order.
   const sortedItems = useMemo(() => {
-    return [...(planItems ?? [])].sort((a, b) => a.start_time.localeCompare(b.start_time));
+    return [...(planItems ?? [])];
   }, [planItems]);
 
   // Timeline render shows ONLY pending/in_progress rows. Completed/skipped/deferred
@@ -163,9 +166,9 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     if (viewTomorrow) return null;
     const pending = sortedItems.filter((i) => i.status !== "completed" && i.status !== "skipped");
     if (pending.length === 0) return null;
-    const upcoming = pending.find((i) => i.start_time >= nowTime);
-    return upcoming?.id ?? pending[0]?.id ?? null;
-  }, [sortedItems, nowTime, viewTomorrow]);
+    // Priority truth = sort_order = list order. Top of the list is the focus card.
+    return pending[0]?.id ?? null;
+  }, [sortedItems, viewTomorrow]);
 
   const activeItem = useMemo(() => sortedItems.find((i) => i.id === activeItemId) ?? null, [sortedItems, activeItemId]);
   const activeIsOverdue = useMemo(() => {
@@ -435,6 +438,33 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  // Persist a new top-to-bottom order to the DB. sort_order IS the priority truth
+  // (Master Ref 0B.1): renumber the WHOLE visible list 1,2,3… on every drop. This
+  // also cleans any stale junk values on the first drag. No "Regenerate" — the drop
+  // is the trigger; once the write lands the query re-reads and the order is true.
+  const persistOrder = async (orderedIds: string[]) => {
+    // Renumber sequentially, starting at 1, in the exact dropped order.
+    const updates = orderedIds.map((id, idx) =>
+      supabase
+        .from("plan_items")
+        .update({ sort_order: idx + 1 } as any)
+        .eq("id", id),
+    );
+    const results = await Promise.all(updates);
+    const firstError = results.find((r) => r.error)?.error;
+    if (firstError) {
+      console.warn("[drag] sort_order write failed", firstError);
+      toast.error("Couldn't save the new order.");
+      // Re-read to fall back to the DB truth rather than leaving a lie on screen.
+      queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+      return;
+    }
+    // Re-read from DB so the list reflects the persisted sort_order, then drop the
+    // local visual override. ~half-second settle is the natural result (0B.3).
+    await queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    setLocalOrder(null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || viewTomorrow) return;
@@ -454,8 +484,10 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, planId = 
     }
 
     const reordered = arrayMove(visibleItems, activeIdx, overIdx);
-    setLocalOrder(reordered.map((i) => i.id));
-    toast("Reordered — hit Regenerate to apply");
+    const orderedIds = reordered.map((i) => i.id);
+    // Instant under-the-hand visual, then persist to DB (source of truth).
+    setLocalOrder(orderedIds);
+    void persistOrder(orderedIds);
   };
 
   if (isLoading) return null;
