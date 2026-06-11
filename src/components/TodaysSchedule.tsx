@@ -694,7 +694,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
                   >
                     {label}
                   </span>
-                  <span style={{ flex: 1, fontSize: 15, color: C.rowName }}>{item.title}</span>
+                  <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: C.rowName }}>{item.title}</span>
                   <span style={{ fontSize: 14, fontWeight: 500, color: C.rowDur }}>
                     {fmtDur(item.est_minutes || 0)}
                   </span>
@@ -1357,7 +1357,7 @@ function TaskRow({
             gap: 8,
           }}
         >
-          <span style={{ flex: 1 }}>{item.title}</span>
+          <span style={{ flex: 1, fontWeight: 700 }}>{item.title}</span>
           {item.pinned_time && <Pin size={13} style={{ color: C.gold, flexShrink: 0 }} />}
         </button>
         <DurationEditor
@@ -1368,9 +1368,6 @@ function TaskRow({
             fontSize: 14,
             fontWeight: 500,
             color: C.rowDur,
-            textDecoration: "underline",
-            textDecorationColor: "rgba(154,107,63,0.35)",
-            textUnderlineOffset: 3,
           }}
         />
       </div>
@@ -1462,6 +1459,7 @@ function DidntFitRow({
             background: "transparent",
             border: "none",
             fontSize: 14,
+            fontWeight: 700,
             color: C.didntItem,
             cursor: "pointer",
           }}
@@ -1475,9 +1473,6 @@ function DidntFitRow({
           triggerStyle={{
             fontSize: 14,
             color: C.didntItem,
-            textDecoration: "underline",
-            textDecorationColor: "rgba(99,56,6,0.3)",
-            textUnderlineOffset: 3,
           }}
         />
       </div>
