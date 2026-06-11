@@ -558,9 +558,24 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   }
 
   if (viewTomorrow) {
-    const tomorrowTasks = allRows.filter(
+    // Tomorrow = calm preview. Walls (calendar events) render as blue blocks with
+    // their real clock times; tasks render as no-clock NEXT/THEN rows. Both are
+    // interleaved in clock order. No focus card and no runway verdicts — those are
+    // "right now" concepts and tomorrow has no "now" yet.
+    const tomorrowTaskRows = allRows.filter(
       (r) => !(r.is_calendar_event || r.is_external) && r.status !== "completed" && r.status !== "skipped",
     );
+    const tomorrowWallRows = allRows.filter((r) => r.is_calendar_event || r.is_external);
+
+    type TomNode =
+      | { kind: "task"; row: PlanItem; startMin: number }
+      | { kind: "wall"; row: PlanItem; startMin: number };
+    const tomNodes: TomNode[] = [];
+    tomorrowTaskRows.forEach((row) => tomNodes.push({ kind: "task", row, startMin: timeToMin(row.start_time) }));
+    tomorrowWallRows.forEach((row) => tomNodes.push({ kind: "wall", row, startMin: timeToMin(row.start_time) }));
+    tomNodes.sort((a, b) => a.startMin - b.startMin);
+
+    let taskSeq = 0;
     return (
       <div style={{ maxWidth: 640, margin: "0 auto" }}>
         <TogglePills viewTomorrow={viewTomorrow} onToggle={onToggleTab} />
@@ -584,38 +599,76 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
             >
               YOUR DAY
             </p>
-            {tomorrowTasks.map((item, i) => (
-              <div
-                key={item.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  background: C.rowBg,
-                  border: `0.5px solid ${C.rowBorder}`,
-                  borderRadius: 8,
-                  padding: "10px 14px",
-                  margin: "6px 0",
-                }}
-              >
-                <span
+            {tomNodes.map((node) => {
+              if (node.kind === "wall") {
+                const w = node.row;
+                return (
+                  <div
+                    key={w.id}
+                    style={{
+                      background: C.upWallBg,
+                      borderRadius: "0 8px 8px 0",
+                      borderLeft: `3px solid ${C.upWallBorder}`,
+                      padding: "12px 14px",
+                      margin: "10px 0",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 15,
+                          fontWeight: 500,
+                          color: C.upWallTitle,
+                        }}
+                      >
+                        <Lock size={13} /> {w.title}
+                      </span>
+                      <span style={{ fontSize: 13, color: C.upWallTime }}>
+                        {formatTime12h(w.start_time)}–{formatTime12h(w.end_time)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              const item = node.row;
+              const label = taskSeq === 0 ? "NEXT" : "THEN";
+              taskSeq += 1;
+              return (
+                <div
+                  key={item.id}
                   style={{
-                    fontSize: 11,
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: C.gold,
-                    minWidth: 38,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    background: C.rowBg,
+                    border: `0.5px solid ${C.rowBorder}`,
+                    borderRadius: 8,
+                    padding: "10px 14px",
+                    margin: "6px 0",
                   }}
                 >
-                  {i === 0 ? "Next" : "Then"}
-                </span>
-                <span style={{ flex: 1, fontSize: 15, color: C.rowName }}>{item.title}</span>
-                <span style={{ fontSize: 14, fontWeight: 500, color: C.rowDur }}>
-                  {item.is_calendar_event ? "" : fmtDur(item.est_minutes || 0)}
-                </span>
-              </div>
-            ))}
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: C.gold,
+                      minWidth: 38,
+                    }}
+                  >
+                    {label}
+                  </span>
+                  <span style={{ flex: 1, fontSize: 15, color: C.rowName }}>{item.title}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: C.rowDur }}>
+                    {fmtDur(item.est_minutes || 0)}
+                  </span>
+                </div>
+              );
+            })}
           </>
         )}
       </div>
