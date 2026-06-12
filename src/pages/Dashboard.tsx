@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Inbox, ChevronRight, ChevronDown, Plus, Pause, Play, CalendarRange } from "lucide-react";
+import { Inbox, ChevronRight, ChevronDown, Plus, Pause, Play, CalendarRange, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BrainDumpModal } from "@/components/BrainDumpModal";
 import { AddNoteModal } from "@/components/AddNoteModal";
@@ -24,6 +24,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getGreeting, formatDate } from "@/lib/constants";
 
+const SYNC_CALENDAR_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-sync-today";
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -32,6 +34,7 @@ export default function Dashboard() {
   const [viewTomorrow, setViewTomorrow] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [pauseDatesOpen, setPauseDatesOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -43,6 +46,24 @@ export default function Dashboard() {
 
   const loading = loadingPlan || loadingItems;
   const hasPlan = !!plan;
+
+  // Silent same-day calendar sync: fire webhook, then refresh the plan so any
+  // newly-added calendar walls appear. No toast on success (Telegram covers errors).
+  const handleSyncCalendar = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    try {
+      await fetch(SYNC_CALENDAR_WEBHOOK, { method: "POST" });
+    } catch (e) {
+      console.warn("[sync-calendar] webhook call failed", e);
+    } finally {
+      // Give the workflow a moment to write, then refresh the schedule.
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["daily-plan"] });
+        setSyncing(false);
+      }, 1200);
+    }
+  };
 
   const handlePauseToday = async () => {
     const today = todayStr();
@@ -213,14 +234,25 @@ export default function Dashboard() {
                 pausedToday={todayPause}
                 addButton={
                   !viewTomorrow ? (
-                    <button
-                      onClick={() => setAddOpen(true)}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] text-[14px] font-medium min-h-[48px] mt-2 mb-1"
-                      style={{ background: "#2A2A2A", border: "1.5px dashed #C89B6E", color: "#EBC99C" }}
-                    >
-                      <Plus size={16} />
-                      Add to today
-                    </button>
+                    <div className="flex gap-2 w-full">
+                      <button
+                        onClick={() => setAddOpen(true)}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-[14px] text-[14px] font-medium min-h-[48px] mt-2 mb-1"
+                        style={{ background: "#2A2A2A", border: "1.5px dashed #C89B6E", color: "#EBC99C" }}
+                      >
+                        <Plus size={16} />
+                        Add to today
+                      </button>
+                      <button
+                        onClick={handleSyncCalendar}
+                        disabled={syncing}
+                        aria-label="Sync calendar"
+                        className="flex items-center justify-center px-4 py-3 rounded-[14px] min-h-[48px] mt-2 mb-1 disabled:opacity-50"
+                        style={{ background: "#2A2A2A", border: "1.5px solid #3A3A3A", color: "#C89B6E" }}
+                      >
+                        <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
+                      </button>
+                    </div>
                   ) : null
                 }
               />
