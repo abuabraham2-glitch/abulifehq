@@ -335,19 +335,30 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
       .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))
       .map((w) => {
         const wallStart = timeToMin(w.start_time);
-        // runway = REAL usable free minutes between now and this wall. Sum only the
-        // engine's free windows that fall before the wall (this excludes a live
-        // event, the school-pickup window, etc. — time you can't actually use).
+        // GAP-based runway. The gap for this wall starts at the END of the latest
+        // wall that finishes before this one (or "now" if none) and runs to this
+        // wall's start. This is the free stretch BETWEEN the previous fixed event
+        // and this one — not a running total from now.
+        let gapStart = nowMin;
+        for (const x of wallRows) {
+          const xs = timeToMin(x.start_time);
+          const xe = timeToMin(x.end_time);
+          if (xs < wallStart && xe <= wallStart && xe > gapStart) gapStart = xe;
+        }
+        // runway = real free minutes inside that gap only (block windows like the
+        // school-pickup rule are already carved out of result.freeWindows).
         const runway = result.freeWindows
-          .filter((fw) => fw.startMin < wallStart)
-          .reduce((s, fw) => s + (Math.min(fw.endMin, wallStart) - fw.startMin), 0);
-        // needed = every active task's duration. If the whole load can't fit in the
-        // real free time before this wall, the verdict honestly says "won't fit",
-        // instead of hiding tasks the engine pushed past the wall.
-        const needed = activeTaskRows.reduce((s, r) => s + (r.est_minutes || 0), 0);
+          .filter((fw) => fw.endMin > gapStart && fw.startMin < wallStart)
+          .reduce((s, fw) => s + (Math.min(fw.endMin, wallStart) - Math.max(fw.startMin, gapStart)), 0);
+        // needed = only tasks the engine placed INSIDE this gap. "Didn't fit"
+        // leftovers are excluded, so the number is true slack: put a 45m task in a
+        // 2h gap and the card reads "1h 15m to spare".
+        const needed = placedTasks
+          .filter((pt) => pt.placed.startMin >= gapStart && pt.placed.endMin <= wallStart)
+          .reduce((s, pt) => s + (pt.placed.endMin - pt.placed.startMin), 0);
         return { row: w, wallStart, wallEnd: timeToMin(w.end_time), needed, runway, fits: runway >= needed };
       });
-  }, [wallRows, nowMin, result, activeTaskRows]);
+  }, [wallRows, nowMin, result, placedTasks]);
 
   const focusTask = useMemo(() => {
     if (liveWall) return null;
