@@ -63,31 +63,31 @@ import { getStaticLockedWindows } from "@/components/StartTimePicker";
 const SKIP_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-skip-event";
 
 const C = {
-  page: "#F5F0E8",
+  page: "#171717",
   focusBg: "#5C3D1E",
   focusName: "#F5F0E8",
   focusDur: "#EBC99C",
   focusDone: "#9A7B5C",
-  focusGrip: "#8A6A4A",
-  gold: "#B8906C",
-  liveWallBg: "#185FA5",
+  focusGrip: "#A98A6A",
+  gold: "#C89B6E",
+  liveWallBg: "#1F4E82",
   liveWallTitle: "#FFFFFF",
   liveWallSub: "#B5D4F4",
   upWallBg: "#E6F1FB",
   upWallBorder: "#378ADD",
   upWallTitle: "#0C447C",
   upWallTime: "#185FA5",
-  fits: "#0F6E56",
-  wontFit: "#854F0B",
-  didntBg: "#FAEEDA",
-  didntHead: "#854F0B",
-  didntItem: "#633806",
-  rowBg: "#FFFFFF",
-  rowBorder: "#E4DACB",
-  rowName: "#3A2E20",
-  rowDur: "#9A6B3F",
-  neutral: "#6B6256",
-  rowGrip: "#C9B79F",
+  fits: "#34A98A",
+  wontFit: "#D89A4E",
+  didntBg: "#E9DDC6",
+  didntHead: "#7A5A2E",
+  didntItem: "#6B4D2A",
+  rowBg: "#2A2A2A",
+  rowBorder: "#3A3A3A",
+  rowName: "#ECE6DC",
+  rowDur: "#B89A78",
+  neutral: "#8A857B",
+  rowGrip: "#6A6258",
 };
 
 const DURATION_PRESETS = [15, 30, 45, 60, 90];
@@ -580,7 +580,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
             marginBottom: 8,
           }}
         >
-          <p style={{ fontSize: 18, fontWeight: 500, color: C.focusBg }}>
+          <p style={{ fontSize: 18, fontWeight: 500, color: C.focusName }}>
             {isSingleDay ? "Paused" : `Paused ${fmt(pausedToday.start_date)} to ${fmt(pausedToday.end_date)}`}
           </p>
         </div>
@@ -856,7 +856,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
                   alignItems: "center",
                   gap: 6,
                   fontSize: 14,
-                  fontWeight: 500,
+                  fontWeight: 700,
                   color: C.didntHead,
                   marginBottom: 8,
                 }}
@@ -874,7 +874,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
                   durationSaving={updatePlanItemDuration.isPending}
                 />
               ))}
-              <div style={{ fontSize: 12, color: C.didntHead, marginTop: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.didntHead, marginTop: 8 }}>
                 Nothing is lost. These come back in tomorrow's pool.
               </div>
             </div>
@@ -1179,7 +1179,7 @@ function DurationEditor({
               minHeight: 36,
               cursor: custom ? "pointer" : "default",
               border: "none",
-              background: custom ? C.focusBg : "#D9CCBA",
+              background: custom ? C.focusBg : "#4A4A4A",
               color: "#fff",
             }}
           >
@@ -1304,8 +1304,8 @@ function TaskRow({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 20 : ("auto" as any),
-    boxShadow: isDragging ? "0 8px 20px rgba(0,0,0,0.12)" : undefined,
-    background: isDragging ? "#FFF8F0" : C.rowBg,
+    boxShadow: isDragging ? "0 8px 20px rgba(0,0,0,0.40)" : undefined,
+    background: isDragging ? "#33302B" : C.rowBg,
   };
   return (
     <div ref={setNodeRef} style={{ ...style }}>
@@ -1405,7 +1405,7 @@ function TaskRow({
             onClick={onDelete}
             style={{
               fontSize: 13,
-              color: "#C44",
+              color: "#E0795C",
               background: "transparent",
               border: `0.5px solid ${C.rowBorder}`,
               borderRadius: 8,
@@ -1484,7 +1484,7 @@ function DidntFitRow({
               fontSize: 13,
               color: C.fits,
               background: "transparent",
-              border: `0.5px solid ${C.rowBorder}`,
+              border: `0.5px solid ${C.didntHead}`,
               borderRadius: 8,
               padding: "5px 12px",
               cursor: "pointer",
@@ -1496,9 +1496,9 @@ function DidntFitRow({
             onClick={onPush}
             style={{
               fontSize: 13,
-              color: C.neutral,
+              color: C.didntItem,
               background: "transparent",
-              border: `0.5px solid ${C.rowBorder}`,
+              border: `0.5px solid ${C.didntHead}`,
               borderRadius: 8,
               padding: "5px 12px",
               cursor: "pointer",
@@ -1510,9 +1510,9 @@ function DidntFitRow({
             onClick={onDelete}
             style={{
               fontSize: 13,
-              color: "#C44",
+              color: "#B5462E",
               background: "transparent",
-              border: `0.5px solid ${C.rowBorder}`,
+              border: `0.5px solid ${C.didntHead}`,
               borderRadius: 8,
               padding: "5px 12px",
               cursor: "pointer",
@@ -1532,13 +1532,33 @@ function RunwayLine({ needed, runway, fits }: { needed: number; runway: number; 
   }
   if (fits) {
     return (
-      <div style={{ fontSize: 12, marginTop: 4, color: C.fits, display: "flex", alignItems: "center", gap: 5 }}>
+      <div
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          marginTop: 4,
+          color: C.fits,
+          display: "flex",
+          alignItems: "center",
+          gap: 5,
+        }}
+      >
         <Check size={13} /> all fit · {fmtDur(runway - needed)} to spare
       </div>
     );
   }
   return (
-    <div style={{ fontSize: 12, marginTop: 4, color: C.wontFit, display: "flex", alignItems: "center", gap: 5 }}>
+    <div
+      style={{
+        fontSize: 12,
+        fontWeight: 600,
+        marginTop: 4,
+        color: C.wontFit,
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+      }}
+    >
       <AlertTriangle size={13} /> won't fit — push something ({fmtDur(needed - runway)} over)
     </div>
   );
@@ -1556,8 +1576,8 @@ function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onTogg
           padding: "6px 16px",
           border: "none",
           cursor: "pointer",
-          background: !viewTomorrow ? C.gold : "#E8DDD0",
-          color: !viewTomorrow ? "#fff" : "#3D3225",
+          background: !viewTomorrow ? C.gold : "#33312D",
+          color: !viewTomorrow ? "#fff" : "#C9C2B6",
         }}
       >
         Today
@@ -1571,8 +1591,8 @@ function TogglePills({ viewTomorrow, onToggle }: { viewTomorrow: boolean; onTogg
           padding: "6px 16px",
           border: "none",
           cursor: "pointer",
-          background: viewTomorrow ? C.gold : "#E8DDD0",
-          color: viewTomorrow ? "#fff" : "#3D3225",
+          background: viewTomorrow ? C.gold : "#33312D",
+          color: viewTomorrow ? "#fff" : "#C9C2B6",
         }}
       >
         Tomorrow
