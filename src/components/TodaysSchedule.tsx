@@ -785,8 +785,6 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
             />
           ) : null}
 
-          {addButton}
-
           <p
             style={{ fontSize: 11, fontWeight: 500, letterSpacing: "0.1em", color: C.gold, margin: "14px 0 10px 2px" }}
           >
@@ -847,6 +845,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
           {streamNodes.length === 0 && (
             <p style={{ fontSize: 13, color: C.neutral, padding: "8px 2px" }}>Nothing else queued.</p>
           )}
+
+          <div style={{ marginTop: 14, marginBottom: 2 }}>{addButton}</div>
 
           {didNotFitTasks.length > 0 && (
             <div style={{ background: C.didntBg, borderRadius: 12, padding: "12px 14px", marginTop: 16 }}>
