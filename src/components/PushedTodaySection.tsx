@@ -4,10 +4,8 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePlanItemsByDate, todayStr, type PlanItem } from "@/hooks/useDailyPlan";
-import { findNextSlot, pacificIso, timeToMin, minToTime } from "@/lib/planScheduling";
+import { findNextSlot, timeToMin, minToTime } from "@/lib/planScheduling";
 import { formatTime12h } from "@/lib/constants";
-
-const CREATE_EVENT_WEBHOOK = "https://bottlesandprint.app.n8n.cloud/webhook/life-hq-create-event";
 
 export function PushedTodaySection() {
   const date = todayStr();
@@ -16,7 +14,7 @@ export function PushedTodaySection() {
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
-  const pushed = useMemo(() => (items ?? []).filter((i) => i.status === "skipped" || i.status === "deferred"), [items]);
+  const pushed = useMemo(() => (items ?? []).filter((i) => i.status === "deferred"), [items]);
 
   const taskIds = useMemo(() => pushed.map((p) => p.task_id).filter(Boolean) as string[], [pushed]);
 
@@ -35,19 +33,17 @@ export function PushedTodaySection() {
   if (pushed.length === 0) return null;
 
   const subtitleFor = (item: PlanItem): string => {
-    if (item.status === "skipped") return "Pushed to Tomorrow";
-    if (item.status === "deferred") {
-      const t = item.task_id ? tasksMap[item.task_id] : null;
-      const def = t?.deferred_until;
-      if (!def) return "Pushed";
-      const today = new Date(date + "T12:00:00");
-      const target = new Date(def + "T12:00:00");
-      const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
-      if (diff === 7) return "Pushed to Next week";
-      if (diff === 14) return "Pushed to 2 weeks";
-      return `Pushed to ${target.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-    }
-    return "Pushed";
+    // Read the push date straight off the plan_item (works even with no task_id).
+    // Fall back to the tasks table only if the plan_item date is missing.
+    const def = (item as any).deferred_until || (item.task_id ? tasksMap[item.task_id]?.deferred_until : null);
+    if (!def) return "Pushed";
+    const today = new Date(date + "T12:00:00");
+    const target = new Date(def + "T12:00:00");
+    const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+    if (diff <= 1) return "Pushed to Tomorrow";
+    if (diff === 7) return "Pushed to Next week";
+    if (diff === 14) return "Pushed to 2 weeks";
+    return `Pushed to ${target.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
   };
 
   const bringBack = async (item: PlanItem) => {
@@ -84,6 +80,7 @@ export function PushedTodaySection() {
           start_time: finalStart,
           end_time: finalEnd,
           sort_order: sortOrder,
+          deferred_until: null,
         } as any)
         .eq("id", item.id);
       if (error) throw error;
@@ -95,19 +92,7 @@ export function PushedTodaySection() {
           .eq("id", item.task_id);
       }
 
-      // Fire create-event webhook
-      const cat = item.category || (item.task_id ? tasksMap[item.task_id]?.category : null) || "Personal";
-      fetch(CREATE_EVENT_WEBHOOK, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: item.title,
-          start: pacificIso(date, finalStart),
-          end: pacificIso(date, finalEnd),
-          category: cat,
-          planItemId: item.id,
-        }),
-      }).catch(() => {});
+      // Tasks float; real events live in Google Calendar. Bring-back must NOT create a calendar event.
 
       queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
 
