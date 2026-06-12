@@ -335,13 +335,19 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
       .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))
       .map((w) => {
         const wallStart = timeToMin(w.start_time);
-        const needed = placedTasks
-          .filter((pt) => pt.placed.endMin <= wallStart)
-          .reduce((s, pt) => s + (pt.placed.endMin - pt.placed.startMin), 0);
-        const runway = wallStart - nowMin;
+        // runway = REAL usable free minutes between now and this wall. Sum only the
+        // engine's free windows that fall before the wall (this excludes a live
+        // event, the school-pickup window, etc. — time you can't actually use).
+        const runway = result.freeWindows
+          .filter((fw) => fw.startMin < wallStart)
+          .reduce((s, fw) => s + (Math.min(fw.endMin, wallStart) - fw.startMin), 0);
+        // needed = every active task's duration. If the whole load can't fit in the
+        // real free time before this wall, the verdict honestly says "won't fit",
+        // instead of hiding tasks the engine pushed past the wall.
+        const needed = activeTaskRows.reduce((s, r) => s + (r.est_minutes || 0), 0);
         return { row: w, wallStart, wallEnd: timeToMin(w.end_time), needed, runway, fits: runway >= needed };
       });
-  }, [wallRows, nowMin, placedTasks]);
+  }, [wallRows, nowMin, result, activeTaskRows]);
 
   const focusTask = useMemo(() => {
     if (liveWall) return null;
