@@ -240,6 +240,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<PlanItem | null>(null);
   const [doneStripOpen, setDoneStripOpen] = useState(false);
+  const [didntFitOpen, setDidntFitOpen] = useState(false);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
 
   const nowMin = useMemo(() => pacificNowMin(), []);
@@ -877,33 +878,47 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
 
           {didNotFitTasks.length > 0 && (
             <div style={{ background: C.didntBg, borderRadius: 12, padding: "12px 14px", marginTop: 16 }}>
-              <div
+              <button
+                onClick={() => setDidntFitOpen((o) => !o)}
                 style={{
+                  width: "100%",
                   display: "flex",
                   alignItems: "center",
+                  justifyContent: "space-between",
                   gap: 6,
+                  background: "transparent",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
                   fontSize: 14,
                   fontWeight: 700,
                   color: C.didntHead,
-                  marginBottom: 8,
+                  marginBottom: didntFitOpen ? 8 : 0,
                 }}
               >
-                <CornerRightUp size={15} /> Didn't fit today — rolls to tomorrow
-              </div>
-              {didNotFitTasks.map((row) => (
-                <DidntFitRow
-                  key={row.id}
-                  item={row}
-                  onDone={() => openDoneDialog(row)}
-                  onPush={() => setPushItem(row)}
-                  onDelete={() => requestDelete(row)}
-                  onDurationChange={(m) => handleDurationChange(row, m)}
-                  durationSaving={updatePlanItemDuration.isPending}
-                />
-              ))}
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.didntHead, marginTop: 8 }}>
-                Nothing is lost. These come back in tomorrow's pool.
-              </div>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <CornerRightUp size={15} /> Didn't fit today ({didNotFitTasks.length}) — rolls to tomorrow
+                </span>
+                {didntFitOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+              </button>
+              {didntFitOpen && (
+                <>
+                  {didNotFitTasks.map((row) => (
+                    <DidntFitRow
+                      key={row.id}
+                      item={row}
+                      onDone={() => openDoneDialog(row)}
+                      onPush={() => setPushItem(row)}
+                      onDelete={() => requestDelete(row)}
+                      onDurationChange={(m) => handleDurationChange(row, m)}
+                      durationSaving={updatePlanItemDuration.isPending}
+                    />
+                  ))}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.didntHead, marginTop: 8 }}>
+                    Nothing is lost. These come back in tomorrow's pool.
+                  </div>
+                </>
+              )}
             </div>
           )}
         </SortableContext>
