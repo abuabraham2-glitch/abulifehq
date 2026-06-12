@@ -257,7 +257,8 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
         !(r.is_calendar_event === true || r.is_external === true) &&
         r.status !== "completed" &&
         r.status !== "skipped" &&
-        r.status !== "deferred",
+        r.status !== "deferred" &&
+        r.status !== "carried_over",
     );
     if (!localOrder) return tasks;
     const orderMap = new Map(localOrder.map((id, idx) => [id, idx]));
@@ -449,21 +450,26 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   };
 
   const handlePushTomorrow = async (item: PlanItem) => {
-    await updatePlanItem.mutateAsync({ id: item.id, status: "skipped" });
+    const target = tomorrowStr();
+    await supabase
+      .from("plan_items")
+      .update({ status: "deferred", deferred_until: target } as any)
+      .eq("id", item.id);
     if (item.task_id) {
-      await updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: tomorrowStr() });
+      await updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: target });
     }
     fireSkipWebhook(item);
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     setPushItem(null);
   };
 
   const handleDefer = async (item: PlanItem, deferDate: string) => {
     const planItemPatch = supabase
       .from("plan_items")
-      .update({ status: "skipped" } as any)
+      .update({ status: "deferred", deferred_until: deferDate } as any)
       .eq("id", item.id)
       .then(({ error }) => {
-        if (error) console.warn("[push] plan_items skipped patch failed", error);
+        if (error) console.warn("[push] plan_items deferred patch failed", error);
       });
     const tasksPatch = item.task_id
       ? updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: deferDate })
@@ -481,7 +487,7 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   };
 
   const performDelete = async (item: PlanItem) => {
-    await supabase.from("plan_items").update({ status: "skipped" }).eq("id", item.id);
+    await supabase.from("plan_items").update({ status: "carried_over" }).eq("id", item.id);
     let archivedTaskIds: string[] = [];
     if (item.task_id) {
       await supabase.from("tasks").update({ status: "archived" }).eq("id", item.task_id);
@@ -595,7 +601,11 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
     // interleaved in clock order. No focus card and no runway verdicts — those are
     // "right now" concepts and tomorrow has no "now" yet.
     const tomorrowTaskRows = allRows.filter(
-      (r) => !(r.is_calendar_event || r.is_external) && r.status !== "completed" && r.status !== "skipped",
+      (r) =>
+        !(r.is_calendar_event || r.is_external) &&
+        r.status !== "completed" &&
+        r.status !== "skipped" &&
+        r.status !== "carried_over",
     );
     const tomorrowWallRows = allRows.filter((r) => r.is_calendar_event || r.is_external);
 
