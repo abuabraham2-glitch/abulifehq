@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [addOpen, setAddOpen] = useState(false);
   const [pauseDatesOpen, setPauseDatesOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [freeMinutes, setFreeMinutes] = useState<number | null>(null);
 
   const { data: plan, isLoading: loadingPlan } = useTodayPlan();
   const { data: planItems, isLoading: loadingItems } = useTodayPlanItems();
@@ -224,7 +225,7 @@ export default function Dashboard() {
           {!loading && (hasPlan || todayPause) && (
             <>
               {/* Day Strip */}
-              <DayStripCard viewTomorrow={viewTomorrow} />
+              <DayStripCard viewTomorrow={viewTomorrow} freeMinutes={freeMinutes} />
 
               {/* Toggle + Focus + Timeline (or Paused card when today is paused) */}
               <TodaysSchedule
@@ -232,6 +233,7 @@ export default function Dashboard() {
                 onToggleTab={() => setViewTomorrow(!viewTomorrow)}
                 planId={plan?.id ?? null}
                 pausedToday={todayPause}
+                onFreeMinutesChange={setFreeMinutes}
                 addButton={
                   !viewTomorrow ? (
                     <div className="flex gap-2 w-full">
