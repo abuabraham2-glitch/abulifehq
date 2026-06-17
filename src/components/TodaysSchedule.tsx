@@ -213,6 +213,39 @@ function formatDateStr(d: Date): string {
   return `${y}-${m}-${dd}`;
 }
 
+function pacificDateStr(): string {
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }));
+  return formatDateStr(d);
+}
+
+// Press-and-hold (~500ms) that works for touch and mouse. Used to remove a wall
+// from today's schedule. Cancels if the finger/pointer moves or lifts early.
+function useLongPress(onLongPress: () => void, ms = 500) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fired = useRef(false);
+  const start = () => {
+    fired.current = false;
+    timer.current = setTimeout(() => {
+      fired.current = true;
+      onLongPress();
+    }, ms);
+  };
+  const clear = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+  };
+  return {
+    onTouchStart: start,
+    onTouchEnd: clear,
+    onTouchMove: clear,
+    onMouseDown: start,
+    onMouseUp: clear,
+    onMouseLeave: clear,
+  };
+}
+
 interface Props {
   viewTomorrow: boolean;
   onToggleTab: () => void;
@@ -246,6 +279,7 @@ export function TodaysSchedule({
   const [pickDateOpen, setPickDateOpen] = useState(false);
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
   const [confirmDeleteItem, setConfirmDeleteItem] = useState<PlanItem | null>(null);
+  const [dismissWallItem, setDismissWallItem] = useState<PlanItem | null>(null);
   const [doneStripOpen, setDoneStripOpen] = useState(false);
   const [didntFitOpen, setDidntFitOpen] = useState(false);
   const [localOrder, setLocalOrder] = useState<string[] | null>(null);
@@ -358,6 +392,13 @@ export function TodaysSchedule({
       return nowMin >= s && nowMin < e;
     });
   }, [wallRows, nowMin]);
+
+  // Long-press binding for the live "Happening now" wall (rendered once, so the
+  // hook can live at the top level). Only arms when the live wall is a real
+  // calendar event (has calendar_event_id).
+  const liveWallLongPress = useLongPress(() => {
+    if (liveWall && liveWall.calendar_event_id) setDismissWallItem(liveWall);
+  });
 
   const upcomingWalls = useMemo(() => {
     return wallRows
@@ -517,6 +558,45 @@ export function TodaysSchedule({
     queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     setPushItem(null);
     setPickDateOpen(false);
+  };
+
+  // Remove a calendar WALL from today's schedule only. The calendar event is left
+  // untouched. We (a) record the dismissal in dismissed_walls so the Same-Day Sync
+  // won't re-add it today, and (b) mark the wall's plan_item carried_over so it
+  // disappears from every view now. Scoped to today; tomorrow's 9pm rebuild is fresh.
+  const performWallDismiss = async (item: PlanItem) => {
+    if (!item.calendar_event_id) return; // only real calendar walls are dismissible
+    const today = pacificDateStr();
+
+    // (a) remember the dismissal (idempotent thanks to the UNIQUE constraint)
+    const { error: dismErr } = await supabase
+      .from("dismissed_walls")
+      .upsert(
+        { calendar_event_id: item.calendar_event_id, dismiss_date: today } as any,
+        { onConflict: "calendar_event_id,dismiss_date" } as any,
+      );
+    if (dismErr) {
+      console.warn("[wall-dismiss] dismissed_walls write failed", dismErr);
+      toast.error("Couldn't remove that wall. Try again.");
+      return;
+    }
+
+    // (b) hide the wall now
+    const { error: piErr } = await supabase
+      .from("plan_items")
+      .update({ status: "carried_over" } as any)
+      .eq("id", item.id);
+    if (piErr) {
+      console.warn("[wall-dismiss] plan_items hide failed", piErr);
+      toast.error("Removed from calendar memory, but the wall didn't hide. Refresh.");
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    toast(`Removed from today: ${item.title}`, {
+      description: "Your calendar wasn't changed.",
+      duration: 4000,
+      style: { background: C.focusBg, color: "#fff", border: "none" },
+    });
   };
 
   const requestDelete = (item: PlanItem) => {
@@ -798,7 +878,17 @@ export function TodaysSchedule({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={draggableIds} strategy={verticalListSortingStrategy}>
           {liveWall ? (
-            <div style={{ background: C.liveWallBg, borderRadius: 20, padding: "30px 28px", marginBottom: 16 }}>
+            <div
+              {...(liveWall.calendar_event_id ? liveWallLongPress : {})}
+              style={{
+                background: C.liveWallBg,
+                borderRadius: 20,
+                padding: "30px 28px",
+                marginBottom: 16,
+                WebkitUserSelect: "none",
+                userSelect: "none",
+              }}
+            >
               <div
                 style={{
                   display: "flex",
@@ -839,35 +929,13 @@ export function TodaysSchedule({
             if (node.kind === "wall") {
               const w = node.wall;
               return (
-                <div
+                <UpcomingWallBlock
                   key={`wall-${w.row.id}`}
-                  style={{
-                    background: C.upWallBg,
-                    borderRadius: "0 8px 8px 0",
-                    borderLeft: `3px solid ${C.upWallBorder}`,
-                    padding: "12px 14px",
-                    margin: "10px 0",
+                  wall={w}
+                  onLongPress={() => {
+                    if (w.row.calendar_event_id) setDismissWallItem(w.row);
                   }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 15,
-                        fontWeight: 500,
-                        color: C.upWallTitle,
-                      }}
-                    >
-                      <Lock size={13} /> {w.row.title}
-                    </span>
-                    <span style={{ fontSize: 13, color: C.upWallTime }}>
-                      {minTo12h(w.wallStart)}–{minTo12h(w.wallEnd)}
-                    </span>
-                  </div>
-                  <RunwayLine needed={w.needed} runway={w.runway} fits={w.fits} />
-                </div>
+                />
               );
             }
             const row = node.row;
@@ -1135,6 +1203,34 @@ export function TodaysSchedule({
               }}
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!dismissWallItem} onOpenChange={(o) => !o && setDismissWallItem(null)}>
+        <AlertDialogContent className="max-w-[340px] rounded-[18px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this from today?</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{dismissWallItem?.title}" will be removed from today's schedule so it stops blocking your free time. Your
+              Google Calendar won't be changed. It can come back tomorrow if it's still on your calendar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl" style={{ borderColor: C.gold, color: C.focusBg }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl text-white hover:opacity-90"
+              style={{ backgroundColor: "#C44" }}
+              onClick={() => {
+                const it = dismissWallItem;
+                setDismissWallItem(null);
+                if (it) performWallDismiss(it);
+              }}
+            >
+              Remove from today
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1580,6 +1676,57 @@ function DidntFitRow({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function UpcomingWallBlock({
+  wall,
+  onLongPress,
+}: {
+  wall: {
+    row: PlanItem;
+    wallStart: number;
+    wallEnd: number;
+    needed: number;
+    runway: number;
+    fits: boolean;
+  };
+  onLongPress: () => void;
+}) {
+  const press = useLongPress(onLongPress);
+  const dismissible = !!wall.row.calendar_event_id;
+  return (
+    <div
+      {...(dismissible ? press : {})}
+      style={{
+        background: C.upWallBg,
+        borderRadius: "0 8px 8px 0",
+        borderLeft: `3px solid ${C.upWallBorder}`,
+        padding: "12px 14px",
+        margin: "10px 0",
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 15,
+            fontWeight: 500,
+            color: C.upWallTitle,
+          }}
+        >
+          <Lock size={13} /> {wall.row.title}
+        </span>
+        <span style={{ fontSize: 13, color: C.upWallTime }}>
+          {minTo12h(wall.wallStart)}–{minTo12h(wall.wallEnd)}
+        </span>
+      </div>
+      <RunwayLine needed={wall.needed} runway={wall.runway} fits={wall.fits} />
     </div>
   );
 }
