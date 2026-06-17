@@ -569,6 +569,9 @@ export function TodaysSchedule({
     const today = pacificDateStr();
 
     // (a) remember the dismissal (idempotent thanks to the UNIQUE constraint)
+    // Cast the client to any for this call: dismissed_walls is a new table and the
+    // generated Supabase types don't include it yet, so TS would error on .from().
+    // (Same pattern used elsewhere in this file for loosely-typed writes.)
     const { error: dismErr } = await (supabase as any)
       .from("dismissed_walls")
       .upsert(
