@@ -569,11 +569,11 @@ export function TodaysSchedule({
     const today = pacificDateStr();
 
     // (a) remember the dismissal (idempotent thanks to the UNIQUE constraint)
-    const { error: dismErr } = await supabase
+    const { error: dismErr } = await (supabase as any)
       .from("dismissed_walls")
       .upsert(
-        { calendar_event_id: item.calendar_event_id, dismiss_date: today } as any,
-        { onConflict: "calendar_event_id,dismiss_date" } as any,
+        { calendar_event_id: item.calendar_event_id, dismiss_date: today },
+        { onConflict: "calendar_event_id,dismiss_date" },
       );
     if (dismErr) {
       console.warn("[wall-dismiss] dismissed_walls write failed", dismErr);
