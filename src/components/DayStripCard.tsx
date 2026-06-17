@@ -1,85 +1,61 @@
-import { useMemo, useState } from 'react';
-import { X } from 'lucide-react';
-import { usePlanItemsByDate, todayStr, tomorrowStr } from '@/hooks/useDailyPlan';
-
-function todayPacific() {
-  const d = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+import { useMemo } from "react";
+import { usePlanItemsByDate, todayStr, tomorrowStr } from "@/hooks/useDailyPlan";
 
 const SKIP_TITLE = (t: string) => {
   const l = t.toLowerCase();
   return (
-    l.startsWith('buffer') ||
-    l === 'lunch break' ||
-    l.includes('victory hour') ||
-    l.startsWith('school pickup') ||
-    l.includes('wind down') ||
-    l.includes('morning routine')
+    l.startsWith("buffer") ||
+    l === "lunch break" ||
+    l.includes("victory hour") ||
+    l.startsWith("school pickup") ||
+    l.includes("wind down") ||
+    l.includes("morning routine")
   );
 };
 
-interface Props {
-  viewTomorrow?: boolean;
+function fmtDur(totalMin: number): string {
+  const safe = Math.max(0, totalMin);
+  const h = Math.floor(safe / 60);
+  const m = safe % 60;
+  return h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
 }
 
-export function DayStripCard({ viewTomorrow = false }: Props) {
-  const today = todayPacific();
-  const [dismissed, setDismissed] = useState(() => {
-    return localStorage.getItem('daystrip_dismissed_date') === today;
-  });
+interface Props {
+  viewTomorrow?: boolean;
+  /** Live "free time left" in minutes, computed by the engine in TodaysSchedule.
+   *  Undefined while the engine hasn't reported yet (or on the Tomorrow tab). */
+  freeMinutes?: number | null;
+}
 
+export function DayStripCard({ viewTomorrow = false, freeMinutes = null }: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: items } = usePlanItemsByDate(dateString);
 
   const pendingTasks = useMemo(() => {
-    return (items ?? []).filter(
-      (i) => !i.is_calendar_event && !SKIP_TITLE(i.title) && i.status === 'pending'
-    );
+    return (items ?? []).filter((i) => !i.is_calendar_event && !SKIP_TITLE(i.title) && i.status === "pending");
   }, [items]);
 
   const taskCount = pendingTasks.length;
-  const totalMin = useMemo(
-    () => pendingTasks.reduce((s, i) => s + (i.est_minutes || 0), 0),
-    [pendingTasks],
-  );
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  const timeLabel = h > 0 ? (m > 0 ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+  const totalMin = useMemo(() => pendingTasks.reduce((s, i) => s + (i.est_minutes || 0), 0), [pendingTasks]);
 
-  if (dismissed || !items) return null;
+  if (!items) return null;
 
-  const handleDismiss = () => {
-    localStorage.setItem('daystrip_dismissed_date', today);
-    setDismissed(true);
-  };
+  const workLabel = fmtDur(totalMin);
+  const freeLabel = typeof freeMinutes === "number" ? fmtDur(freeMinutes) : "—";
 
   return (
-    <div
-      className="relative rounded-[14px] bg-card p-4 flex items-center"
-      style={{ border: '0.5px solid rgba(0,0,0,0.04)' }}
-    >
-      <div className="flex flex-1 items-center">
-        <div className="flex-1 text-center">
-          <p className="text-[20px] font-semibold text-foreground">{taskCount}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Tasks left</p>
-        </div>
-        <div className="w-px h-10 bg-border" />
-        <div className="flex-1 text-center">
-          <p className="text-[20px] font-semibold text-foreground">{timeLabel}</p>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Work remaining</p>
-        </div>
-      </div>
-
-      <button
-        onClick={handleDismiss}
-        className="absolute top-2.5 right-2.5 p-1 rounded-full text-muted-foreground hover:text-foreground"
-      >
-        <X size={14} />
-      </button>
+    <div style={{ padding: "10px 4px", display: "flex", alignItems: "center" }}>
+      <span style={{ flex: 1, textAlign: "center", fontSize: 12, color: "#9A948A" }}>
+        <span style={{ color: "#ECE6DC", fontWeight: 500 }}>{taskCount}</span> tasks left
+      </span>
+      <div style={{ width: 1, height: 20, background: "#333333" }} />
+      <span style={{ flex: 1, textAlign: "center", fontSize: 12, color: "#9A948A" }}>
+        <span style={{ color: "#ECE6DC", fontWeight: 500 }}>{workLabel}</span> work
+      </span>
+      <div style={{ width: 1, height: 20, background: "#333333" }} />
+      <span style={{ flex: 1, textAlign: "center", fontSize: 12, color: "#9A948A" }}>
+        <span style={{ color: "#ECE6DC", fontWeight: 500 }}>{freeLabel}</span> free
+      </span>
     </div>
   );
 }
