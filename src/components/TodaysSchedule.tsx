@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Check,
   Clock,
@@ -219,9 +219,16 @@ interface Props {
   addButton?: React.ReactNode;
   planId?: string | null;
   pausedToday?: { start_date: string; end_date: string } | null;
+  onFreeMinutesChange?: (mins: number | null) => void;
 }
 
-export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedToday = null }: Props) {
+export function TodaysSchedule({
+  viewTomorrow,
+  onToggleTab,
+  addButton,
+  pausedToday = null,
+  onFreeMinutesChange,
+}: Props) {
   const dateString = viewTomorrow ? tomorrowStr() : todayStr();
   const { data: planItems, isLoading } = usePlanItemsByDate(dateString);
   const updatePlanItem = useUpdatePlanItem();
@@ -322,6 +329,28 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
     [result, rowById],
   );
 
+  // FREE TIME LEFT (Request 2): live minutes from "now" to the hard stop that are
+  // neither a wall (calendar event / rule block) nor an active placed task.
+  //   freeWindows already = (now -> hardStop) minus walls & pins.
+  //   subtract the durations of active tasks the engine placed into those windows.
+  // Completed / deleted / pushed tasks have already left activeTaskRows, so they
+  // are not in result.placed and stop being subtracted automatically; bringing one
+  // back returns it to the pool and subtracts again. No extra logic needed.
+  const freeMinutesLeft = useMemo(() => {
+    const windowFree = result.freeWindows
+      .filter((fw) => fw.endMin > nowMin)
+      .reduce((s, fw) => s + (fw.endMin - Math.max(fw.startMin, nowMin)), 0);
+    const placedDur = result.placed.reduce((s, p) => s + (p.endMin - p.startMin), 0);
+    return Math.max(0, windowFree - placedDur);
+  }, [result, nowMin]);
+
+  // Report the number up to Dashboard so the day-strip can show it next to
+  // "tasks left" / "work remaining". null on the Tomorrow tab (no live "now").
+  useEffect(() => {
+    if (!onFreeMinutesChange) return;
+    onFreeMinutesChange(viewTomorrow ? null : freeMinutesLeft);
+  }, [freeMinutesLeft, viewTomorrow, onFreeMinutesChange]);
+
   const liveWall = useMemo(() => {
     return wallRows.find((w) => {
       const s = timeToMin(w.start_time);
@@ -336,24 +365,15 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
       .sort((a, b) => timeToMin(a.start_time) - timeToMin(b.start_time))
       .map((w) => {
         const wallStart = timeToMin(w.start_time);
-        // GAP-based runway. The gap for this wall starts at the END of the latest
-        // wall that finishes before this one (or "now" if none) and runs to this
-        // wall's start. This is the free stretch BETWEEN the previous fixed event
-        // and this one — not a running total from now.
         let gapStart = nowMin;
         for (const x of wallRows) {
           const xs = timeToMin(x.start_time);
           const xe = timeToMin(x.end_time);
           if (xs < wallStart && xe <= wallStart && xe > gapStart) gapStart = xe;
         }
-        // runway = real free minutes inside that gap only (block windows like the
-        // school-pickup rule are already carved out of result.freeWindows).
         const runway = result.freeWindows
           .filter((fw) => fw.endMin > gapStart && fw.startMin < wallStart)
           .reduce((s, fw) => s + (Math.min(fw.endMin, wallStart) - Math.max(fw.startMin, gapStart)), 0);
-        // needed = only tasks the engine placed INSIDE this gap. "Didn't fit"
-        // leftovers are excluded, so the number is true slack: put a 45m task in a
-        // 2h gap and the card reads "1h 15m to spare".
         const needed = placedTasks
           .filter((pt) => pt.placed.startMin >= gapStart && pt.placed.endMin <= wallStart)
           .reduce((s, pt) => s + (pt.placed.endMin - pt.placed.startMin), 0);
@@ -614,10 +634,6 @@ export function TodaysSchedule({ viewTomorrow, onToggleTab, addButton, pausedTod
   }
 
   if (viewTomorrow) {
-    // Tomorrow = calm preview. Walls (calendar events) render as blue blocks with
-    // their real clock times; tasks render as no-clock NEXT/THEN rows. Both are
-    // interleaved in clock order. No focus card and no runway verdicts — those are
-    // "right now" concepts and tomorrow has no "now" yet.
     const tomorrowTaskRows = allRows.filter(
       (r) =>
         !(r.is_calendar_event || r.is_external) &&
