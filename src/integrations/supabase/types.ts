@@ -103,6 +103,27 @@ export type Database = {
         }
         Relationships: []
       }
+      dismissed_walls: {
+        Row: {
+          calendar_event_id: string
+          created_at: string
+          dismiss_date: string
+          id: string
+        }
+        Insert: {
+          calendar_event_id: string
+          created_at?: string
+          dismiss_date: string
+          id?: string
+        }
+        Update: {
+          calendar_event_id?: string
+          created_at?: string
+          dismiss_date?: string
+          id?: string
+        }
+        Relationships: []
+      }
       grocery_items: {
         Row: {
           checked: boolean | null
