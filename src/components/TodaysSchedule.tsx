@@ -289,7 +289,13 @@ export function TodaysSchedule({
   const allRows = useMemo(() => [...(planItems ?? [])], [planItems]);
 
   const wallRows = useMemo(
-    () => allRows.filter((r) => r.is_calendar_event === true || r.is_external === true),
+    () =>
+      allRows.filter(
+        (r) =>
+          (r.is_calendar_event === true || r.is_external === true) &&
+          r.status !== "carried_over" &&
+          r.status !== "skipped",
+      ),
     [allRows],
   );
 
@@ -724,7 +730,9 @@ export function TodaysSchedule({
         r.status !== "skipped" &&
         r.status !== "carried_over",
     );
-    const tomorrowWallRows = allRows.filter((r) => r.is_calendar_event || r.is_external);
+    const tomorrowWallRows = allRows.filter(
+      (r) => (r.is_calendar_event || r.is_external) && r.status !== "carried_over" && r.status !== "skipped",
+    );
 
     type TomNode =
       | { kind: "task"; row: PlanItem; startMin: number }
