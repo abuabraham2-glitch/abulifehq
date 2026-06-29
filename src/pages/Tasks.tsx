@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-function SortableTaskRow({ task, onClick, index }: { task: Task; onClick: () => void; index: number }) {
+function SortableTaskRow({ task, onClick }: { task: Task; onClick: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
@@ -65,9 +65,6 @@ function SortableTaskRow({ task, onClick, index }: { task: Task; onClick: () => 
       >
         <GripVertical size={16} />
       </button>
-      <span className="text-[15px] font-medium text-muted-foreground flex-shrink-0 w-5 text-right tabular-nums">
-        {index + 1}
-      </span>
       <button onClick={onClick} className="flex-1 min-w-0 text-left">
         <p className="text-[15px] md:text-base font-medium text-foreground">{task.name || "Untitled task"}</p>
         <div className="flex items-center gap-1.5 mt-1">
@@ -195,7 +192,7 @@ export default function Tasks() {
           {!isLoading && sortedTasks.length > 0 && (
             <span
               className="text-[13px] font-medium px-3 py-1 rounded-full"
-              style={{ backgroundColor: "#EDE4F5", color: "#6A4D8C" }}
+              style={{ backgroundColor: "#5C3D1E", color: "#F5F0E8" }}
             >
               {sortedTasks.length} {sortedTasks.length === 1 ? "item" : "items"}
             </span>
@@ -328,15 +325,15 @@ export default function Tasks() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={sortedTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {sortedTasks.map((task, index) => (
-                <SortableTaskRow key={task.id} task={task} index={index} onClick={() => setEditTask(task)} />
+              {sortedTasks.map((task) => (
+                <SortableTaskRow key={task.id} task={task} onClick={() => setEditTask(task)} />
               ))}
             </div>
           </SortableContext>
         </DndContext>
       ) : (
         <div className="space-y-2">
-          {sortedTasks.map((task, index) => {
+          {sortedTasks.map((task) => {
             const checked = selectedIds.has(task.id);
             return (
               <button
@@ -350,9 +347,6 @@ export default function Tasks() {
                 }}
               >
                 {selectMode && <Checkbox checked={checked} className="pointer-events-none flex-shrink-0" />}
-                <span className="text-[15px] font-medium text-muted-foreground flex-shrink-0 w-5 text-right tabular-nums">
-                  {index + 1}
-                </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] md:text-base font-medium text-foreground">{task.name || "Untitled task"}</p>
                   <div className="flex items-center gap-1.5 mt-1">
