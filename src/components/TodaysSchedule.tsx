@@ -270,7 +270,6 @@ export function TodaysSchedule({
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
 
-
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
   const [pushItem, setPushItem] = useState<PlanItem | null>(null);
@@ -547,9 +546,19 @@ export function TodaysSchedule({
       .eq("id", item.id);
     if (item.task_id) {
       await updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: target });
+    } else {
+      // No link (legacy rows). SAFE single-match only: defer the task ONLY if exactly
+      // one matches by exact (case-insensitive) name. Otherwise leave tasks untouched
+      // (the plan_item is already deferred so it leaves today's screen).
+      const titleKey = stripTitleSuffix(item.title);
+      const { data: matches } = await supabase.from("tasks").select("id").ilike("name", titleKey);
+      if (matches && matches.length === 1) {
+        await updateTask.mutateAsync({ id: matches[0].id, status: "deferred", deferred_until: target });
+      }
     }
     fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
     setPushItem(null);
   };
 
@@ -561,12 +570,27 @@ export function TodaysSchedule({
       .then(({ error }) => {
         if (error) console.warn("[push] plan_items deferred patch failed", error);
       });
-    const tasksPatch = item.task_id
-      ? updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: deferDate })
-      : Promise.resolve();
+    let tasksPatch: Promise<unknown> = Promise.resolve();
+    if (item.task_id) {
+      tasksPatch = updateTask.mutateAsync({ id: item.task_id, status: "deferred", deferred_until: deferDate });
+    } else {
+      // No link (legacy rows). SAFE single-match only: defer the task ONLY if exactly
+      // one matches by exact name. Otherwise leave the task pool untouched.
+      const titleKey = stripTitleSuffix(item.title);
+      tasksPatch = supabase
+        .from("tasks")
+        .select("id")
+        .ilike("name", titleKey)
+        .then(({ data: matches }) => {
+          if (matches && matches.length === 1) {
+            return updateTask.mutateAsync({ id: matches[0].id, status: "deferred", deferred_until: deferDate });
+          }
+        });
+    }
     await Promise.all([planItemPatch, tasksPatch]);
     fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+    queryClient.invalidateQueries({ queryKey: ["tasks"] });
     setPushItem(null);
     setPickDateOpen(false);
   };
