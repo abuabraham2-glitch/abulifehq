@@ -270,8 +270,6 @@ export function TodaysSchedule({
   const updateTask = useUpdateTask();
   const queryClient = useQueryClient();
 
-  const pendingCompletions = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
-  const [pendingCompleteIds, setPendingCompleteIds] = useState<Set<string>>(new Set());
 
   const [doneItem, setDoneItem] = useState<PlanItem | null>(null);
   const [actualMinutes, setActualMinutes] = useState(0);
@@ -467,57 +465,64 @@ export function TodaysSchedule({
     setDoneItem(item);
   };
 
-  const handleSaveDone = () => {
+  const handleSaveDone = async () => {
     if (!doneItem) return;
     const item = doneItem;
     const duration = actualMinutes;
     setDoneItem(null);
-    setPendingCompleteIds((prev) => new Set(prev).add(item.id));
 
-    const timeoutId = setTimeout(async () => {
-      pendingCompletions.current.delete(item.id);
-      setPendingCompleteIds((prev) => {
-        const next = new Set(prev);
-        next.delete(item.id);
-        return next;
-      });
+    // IMMEDIATE WRITE (no 5s timeout). The plan_item is marked completed right away,
+    // and the underlying tasks row is flipped so the 9pm planner (which pulls
+    // status=eq.active) can never re-pull it. Undo reverses the write.
+    // Track which task id(s) we actually changed so Undo can reverse exactly those.
+    let completedTaskIds: string[] = [];
+    try {
       await updatePlanItem.mutateAsync({ id: item.id, status: "completed", actual_minutes: duration });
+
       if (item.task_id) {
+        // Linked row: flip the exact task. This is the reliable path.
         await completeTask.mutateAsync(item.task_id);
+        completedTaskIds = [item.task_id];
       } else {
+        // No link (legacy rows). SAFE single-match only: act ONLY if exactly one
+        // task matches by exact (case-insensitive) name. Never bulk-complete.
         const titleKey = stripTitleSuffix(item.title);
         const { data: matches } = await supabase.from("tasks").select("id,name").ilike("name", titleKey);
-        if (matches && matches.length > 0) {
+        if (matches && matches.length === 1) {
           await supabase
             .from("tasks")
             .update({ status: "completed", completed_at: new Date().toISOString() })
-            .in(
-              "id",
-              matches.map((m: any) => m.id),
-            );
+            .eq("id", matches[0].id);
+          completedTaskIds = [matches[0].id];
         }
+        // 0 matches or 2+ matches: leave tasks untouched. The plan_item is already
+        // completed so it leaves today's screen; nothing is bulk-archived.
       }
-      fireSkipWebhook(item);
-    }, 5000);
 
-    pendingCompletions.current.set(item.id, timeoutId);
+      fireSkipWebhook(item);
+      queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    } catch (e) {
+      toast.error("Couldn't mark that done. Try again.");
+      return;
+    }
 
     toast(`Marked done · ${duration}m`, {
       duration: 5000,
       style: { background: C.focusBg, color: "#fff", border: "none" },
       action: {
         label: "Undo",
-        onClick: () => {
-          const t = pendingCompletions.current.get(item.id);
-          if (t) {
-            clearTimeout(t);
-            pendingCompletions.current.delete(item.id);
+        onClick: async () => {
+          // Reverse: plan_item back to pending, and any task we changed back to active.
+          await supabase.from("plan_items").update({ status: "pending" }).eq("id", item.id);
+          if (completedTaskIds.length > 0) {
+            await supabase
+              .from("tasks")
+              .update({ status: "active", completed_at: null } as any)
+              .in("id", completedTaskIds);
           }
-          setPendingCompleteIds((prev) => {
-            const next = new Set(prev);
-            next.delete(item.id);
-            return next;
-          });
+          queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
+          queryClient.invalidateQueries({ queryKey: ["tasks"] });
         },
       },
     });
@@ -616,23 +621,36 @@ export function TodaysSchedule({
   const performDelete = async (item: PlanItem) => {
     await supabase.from("plan_items").update({ status: "carried_over" }).eq("id", item.id);
     let archivedTaskIds: string[] = [];
+    let unsafeMatch = false;
     if (item.task_id) {
+      // Linked row: archive the exact task. Reliable path.
       await supabase.from("tasks").update({ status: "archived" }).eq("id", item.task_id);
       archivedTaskIds = [item.task_id];
     } else {
+      // No link (legacy rows). SAFE single-match only: archive ONLY if exactly one
+      // task matches by exact (case-insensitive) name. Never bulk-archive.
       const titleKey = stripTitleSuffix(item.title);
       const { data: matches } = await supabase.from("tasks").select("id").ilike("name", titleKey);
-      if (matches && matches.length > 0) {
-        archivedTaskIds = matches.map((m: any) => m.id);
-        await supabase.from("tasks").update({ status: "archived" }).in("id", archivedTaskIds);
+      if (matches && matches.length === 1) {
+        archivedTaskIds = [matches[0].id];
+        await supabase.from("tasks").update({ status: "archived" }).eq("id", matches[0].id);
+      } else if (matches && matches.length > 1) {
+        // Ambiguous: do NOT touch any task. The plan_item is already removed from
+        // today, but the task pool is left alone for the user to handle in Tasks.
+        unsafeMatch = true;
       }
+      // 0 matches: nothing to archive; plan_item removal is enough for today.
     }
     if (item.calendar_event_id) fireSkipWebhook(item);
     queryClient.invalidateQueries({ queryKey: ["daily-plan"] });
     queryClient.invalidateQueries({ queryKey: ["tasks"] });
 
     toast(`Deleted: ${item.title}`, {
-      description: item.calendar_event_id ? "Calendar event deleted" : undefined,
+      description: item.calendar_event_id
+        ? "Calendar event deleted"
+        : unsafeMatch
+          ? "Removed from today; review in Tasks if it returns."
+          : undefined,
       duration: 5000,
       action: {
         label: "Undo",
