@@ -425,6 +425,26 @@ export function TodaysSchedule({
       });
   }, [wallRows, nowMin, result, placedTasks]);
 
+  // Reserved rule-windows to DRAW (display only — engine already accounts for these).
+  // We only surface the SCHOOL PICKUP window (the one that visibly shrinks a mid-day gap).
+  // Morning block and the 6pm hard-stop window are intentionally NOT drawn as blocks.
+  // getStaticLockedWindows() returns unlabeled {startMin,endMin}; the pickup window is
+  // identified by its exact times: M/T/Th/F 14:10-15:10, Wednesday 13:10-14:10.
+  const reservedNodes = useMemo(() => {
+    const PICKUP = [
+      { startMin: 14 * 60 + 10, endMin: 15 * 60 + 10 }, // M/T/Th/F 2:10–3:10 PM
+      { startMin: 13 * 60 + 10, endMin: 14 * 60 + 10 }, // Wed 1:10–2:10 PM
+    ];
+    return getStaticLockedWindows()
+      .filter((w: any) => PICKUP.some((p) => p.startMin === w.startMin && p.endMin === w.endMin))
+      .filter((w: any) => w.endMin > nowMin) // don't show what's behind you
+      .map((w: any) => ({
+        startMin: w.startMin,
+        endMin: w.endMin,
+        label: "School pickup",
+      }));
+  }, [nowMin]);
+
   const focusTask = useMemo(() => {
     if (liveWall) return null;
     return placedTasks.length ? placedTasks[0].row : null;
@@ -908,7 +928,8 @@ export function TodaysSchedule({
 
   type StreamNode =
     | { kind: "task"; row: PlanItem; order: number; startMin: number }
-    | { kind: "wall"; wall: (typeof upcomingWalls)[number]; startMin: number };
+    | { kind: "wall"; wall: (typeof upcomingWalls)[number]; startMin: number }
+    | { kind: "reserved"; reserved: (typeof reservedNodes)[number]; startMin: number };
 
   const streamNodes: StreamNode[] = [];
   streamTasks.forEach((row, idx) => {
@@ -916,6 +937,7 @@ export function TodaysSchedule({
     streamNodes.push({ kind: "task", row, order: idx, startMin: placed ? placed.placed.startMin : 9999 });
   });
   upcomingWalls.forEach((w) => streamNodes.push({ kind: "wall", wall: w, startMin: w.wallStart }));
+  reservedNodes.forEach((r) => streamNodes.push({ kind: "reserved", reserved: r, startMin: r.startMin }));
   streamNodes.sort((a, b) => a.startMin - b.startMin);
 
   return (
@@ -991,6 +1013,10 @@ export function TodaysSchedule({
                 />
               );
             }
+            if (node.kind === "reserved") {
+              const r = node.reserved;
+              return <ReservedBlock key={`reserved-${r.startMin}`} reserved={r} />;
+            }
             const row = node.row;
             const isFirst = node.order === 0;
             return (
@@ -1009,6 +1035,16 @@ export function TodaysSchedule({
 
           {streamNodes.length === 0 && (
             <p style={{ fontSize: 13, color: C.neutral, padding: "8px 2px" }}>Nothing else queued.</p>
+          )}
+
+          {hardStopMin() > nowMin && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "16px 2px 4px" }}>
+              <div style={{ flexGrow: 1, height: 1, background: C.rowBorder }} />
+              <span style={{ color: C.rowGrip, fontSize: 11, fontWeight: 500, letterSpacing: "0.04em" }}>
+                DAY ENDS · {minTo12h(hardStopMin())}
+              </span>
+              <div style={{ flexGrow: 1, height: 1, background: C.rowBorder }} />
+            </div>
           )}
 
           <div style={{ marginTop: 14, marginBottom: 2 }}>{addButton}</div>
@@ -1729,6 +1765,33 @@ function DidntFitRow({
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function ReservedBlock({ reserved }: { reserved: { startMin: number; endMin: number; label: string } }) {
+  return (
+    <div
+      style={{
+        background: "transparent",
+        border: `1.5px dashed ${C.rowBorder}`,
+        borderRadius: 8,
+        padding: "10px 14px",
+        margin: "10px 0",
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        WebkitUserSelect: "none",
+        userSelect: "none",
+      }}
+    >
+      <Lock size={14} style={{ color: C.rowGrip }} />
+      <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: C.neutral, letterSpacing: "0.02em" }}>
+        {reserved.label}
+      </span>
+      <span style={{ fontSize: 12, color: C.rowGrip }}>
+        {minTo12h(reserved.startMin)}–{minTo12h(reserved.endMin)}
+      </span>
     </div>
   );
 }
