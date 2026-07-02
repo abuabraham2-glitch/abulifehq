@@ -429,11 +429,11 @@ export function TodaysSchedule({
   // We only surface the SCHOOL PICKUP window (the one that visibly shrinks a mid-day gap).
   // Morning block and the 6pm hard-stop window are intentionally NOT drawn as blocks.
   // getStaticLockedWindows() returns unlabeled {startMin,endMin}; the pickup window is
-  // identified by its exact times: M/T/Th/F 14:10-15:10, Wednesday 13:10-14:10.
+  // identified by its exact times: M/T/Th/F 14:10-15:00, Wednesday 13:10-14:00.
   const reservedNodes = useMemo(() => {
     const PICKUP = [
-      { startMin: 14 * 60 + 10, endMin: 15 * 60 + 10 }, // M/T/Th/F 2:10–3:10 PM
-      { startMin: 13 * 60 + 10, endMin: 14 * 60 + 10 }, // Wed 1:10–2:10 PM
+      { startMin: 14 * 60 + 10, endMin: 15 * 60 + 0 }, // M/T/Th/F 2:10–3:00 PM
+      { startMin: 13 * 60 + 10, endMin: 14 * 60 + 0 }, // Wed 1:10–2:00 PM
     ];
     return getStaticLockedWindows()
       .filter((w: any) => PICKUP.some((p) => p.startMin === w.startMin && p.endMin === w.endMin))
