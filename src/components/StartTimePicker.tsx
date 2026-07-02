@@ -36,8 +36,8 @@ function pacificWeekday(): number {
 // ---------------------------------------------------------------------------
 // TIME RULES — MUST MATCH n8n Rules Config (workflow MaJHuMNBsg5noFra) EXACTLY.
 // Source of truth values read from live Rules Config on June 10, 2026:
-//   WEEKDAY morning block 06:00-08:30 | pickup 14:10-15:10 | hard stop 18:00
-//   WEDNESDAY pickup 13:10-14:10 (overrides weekday pickup)
+//   WEEKDAY morning block 06:00-08:30 | pickup 14:10-15:00 | hard stop 18:00
+//   WEDNESDAY pickup 13:10-14:00 (overrides weekday pickup)
 //   SATURDAY earliest 10:00 | hard stop 16:00
 //   SUNDAY full rest day
 // If a time changes in n8n, change it HERE too. Two places, by design.
@@ -67,9 +67,9 @@ export function getStaticLockedWindows(): LockedWindow[] {
 
   // Wednesday pickup overrides the standard weekday pickup time.
   if (wd === 3) {
-    windows.push({ startMin: hm(13, 10), endMin: hm(14, 10) }); // Wed pickup 1:10–2:10 PM
+    windows.push({ startMin: hm(13, 10), endMin: hm(14, 0) }); // Wed pickup 1:10–2:00 PM
   } else {
-    windows.push({ startMin: hm(14, 10), endMin: hm(15, 10) }); // M/T/Th/F pickup 2:10–3:10 PM
+    windows.push({ startMin: hm(14, 10), endMin: hm(15, 0) }); // M/T/Th/F pickup 2:10–3:00 PM
   }
 
   // Hard stop 6:00 PM — nothing should start at/after the hard stop.
